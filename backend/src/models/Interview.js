@@ -1,0 +1,55 @@
+const mongoose = require('mongoose');
+
+const interviewSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  topic: {
+    type: String,
+    required: true
+  },
+  difficulty: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced'],
+    required: true
+  },
+  score: {
+    type: Number,
+    default: 0
+  },
+  status: {
+    type: String,
+    enum: ['completed', 'terminated'],
+    default: 'completed'
+  },
+  violationsCount: {
+    type: Number,
+    default: 0
+  },
+  violations: [
+    {
+      type: {
+        type: String,
+        required: true
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
+  feedback: {
+    summary: { type: String, default: '' },
+    strengths: { type: [String], default: [] },
+    weaknesses: { type: [String], default: [] },
+    suggestions: { type: [String], default: [] }
+  },
+  date: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+module.exports = mongoose.model('Interview', interviewSchema);
