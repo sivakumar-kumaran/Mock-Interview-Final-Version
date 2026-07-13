@@ -46,6 +46,19 @@ const LoginPage = () => {
     if (res?.success) {
       navigate('/dashboard');
     } else {
+      // Exit fullscreen if login failed
+      if (document.fullscreenElement) {
+        const exitMethod =
+          document.exitFullscreen ||
+          document.webkitExitFullscreen ||
+          document.mozCancelFullScreen ||
+          document.msExitFullscreen;
+        if (exitMethod) {
+          exitMethod.call(document).catch((err) => {
+            console.error('Error exiting fullscreen on failed login:', err);
+          });
+        }
+      }
       setToast({ message: res?.message || 'Login failed', type: 'error' });
     }
   };

@@ -58,6 +58,19 @@ const RegisterPage = () => {
     if (res?.success) {
       navigate('/dashboard');
     } else {
+      // Exit fullscreen if registration failed
+      if (document.fullscreenElement) {
+        const exitMethod =
+          document.exitFullscreen ||
+          document.webkitExitFullscreen ||
+          document.mozCancelFullScreen ||
+          document.msExitFullscreen;
+        if (exitMethod) {
+          exitMethod.call(document).catch((err) => {
+            console.error('Error exiting fullscreen on failed registration:', err);
+          });
+        }
+      }
       setToast({ message: res?.message || 'Registration failed', type: 'error' });
     }
   };

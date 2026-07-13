@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Menu, X, User, LogOut, LayoutDashboard, HelpCircle, FileText, Settings, ShieldAlert, Cpu, Sun, Moon, Info, Home, Brain } from 'lucide-react';
+import { Menu, X, User, LogOut, LayoutDashboard, HelpCircle, FileText, Settings, ShieldAlert, Cpu, Sun, Moon, Info, Home, Brain, Maximize, Minimize } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -11,6 +11,46 @@ const Navbar = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      const docEl = document.documentElement;
+      const requestMethod =
+        docEl.requestFullscreen ||
+        docEl.webkitRequestFullscreen ||
+        docEl.mozRequestFullScreen ||
+        docEl.msRequestFullscreen;
+
+      if (requestMethod) {
+        requestMethod.call(docEl).catch((err) => {
+          console.error('Error enabling fullscreen mode:', err);
+        });
+      }
+    } else {
+      const exitMethod =
+        document.exitFullscreen ||
+        document.webkitExitFullscreen ||
+        document.mozCancelFullScreen ||
+        document.msExitFullscreen;
+
+      if (exitMethod) {
+        exitMethod.call(document).catch((err) => {
+          console.error('Error exiting fullscreen mode:', err);
+        });
+      }
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -93,6 +133,15 @@ const Navbar = () => {
               {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
             </button>
 
+            {/* Fullscreen toggle */}
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-xl text-brand-slate dark:text-dark-muted hover:text-brand-charcoal dark:hover:text-dark-text hover:bg-brand-surface dark:hover:bg-dark-card transition-all duration-200"
+              title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+            >
+              {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            </button>
+
             {user ? (
               <div className="relative">
                 {/* Profile Avatar Button */}
@@ -157,13 +206,21 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile: Theme toggle + menu button */}
+          {/* Mobile: Theme toggle + Fullscreen toggle + menu button */}
           <div className="flex items-center gap-2 md:hidden">
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg text-brand-slate dark:text-dark-muted"
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {isDark ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} />}
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-lg text-brand-slate dark:text-dark-muted"
+              title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+            >
+              {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </button>
             <button
               onClick={() => setIsOpen(!isOpen)}
