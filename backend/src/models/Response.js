@@ -14,6 +14,33 @@ const responseSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  category: {
+    type: String,
+    default: 'technical' // intro, project, technical, coding, database, behavioral
+  },
+  responseType: {
+    type: String,
+    enum: ['verbal', 'coding'],
+    default: 'verbal'
+  },
+  code: {
+    type: String,
+    default: ''
+  },
+  language: {
+    type: String,
+    default: 'javascript'
+  },
+  testCaseResults: [
+    {
+      testCase: Number,
+      passed: Boolean,
+      input: String,
+      expected: String,
+      actual: String,
+      details: String
+    }
+  ],
   evaluation: {
     score: { type: Number, default: 0 },
     technicalAccuracy: { type: Number, default: 0 },

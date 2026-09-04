@@ -82,6 +82,10 @@ const getProfile = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
+          phone: user.phone || '',
+          avatarUrl: user.avatarUrl || '',
+          targetRole: user.targetRole || 'Full Stack Developer',
+          hasUploadedResume: user.hasUploadedResume || false,
           role: user.role,
           createdAt: user.createdAt
         },
@@ -114,7 +118,7 @@ const updateProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const { name, email, password, currentPassword } = req.body;
+    const { name, email, phone, targetRole, avatarUrl, password, currentPassword } = req.body;
 
     // Check if updating email
     if (email && email !== user.email) {
@@ -125,14 +129,15 @@ const updateProfile = async (req, res) => {
       user.email = email;
     }
 
-    if (name) {
-      user.name = name;
-    }
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (targetRole) user.targetRole = targetRole;
+    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
 
     // Check if updating password
     if (password) {
       if (!currentPassword) {
-        return res.status(400).json({ success: false, message: 'Current password is required to set a new one' });
+        return res.status(400).json({ success: false, message: 'Current password is required to set a new password' });
       }
 
       // Check current password (must retrieve with password field selected)
@@ -158,6 +163,10 @@ const updateProfile = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone || '',
+        avatarUrl: user.avatarUrl || '',
+        targetRole: user.targetRole || 'Full Stack Developer',
+        hasUploadedResume: user.hasUploadedResume || false,
         role: user.role
       }
     });

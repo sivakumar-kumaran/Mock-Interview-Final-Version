@@ -2,11 +2,22 @@ const Interview = require('../models/Interview');
 const Response = require('../models/Response');
 const Question = require('../models/Question');
 const Topic = require('../models/Topic');
-const { getQuestions } = require('./questionController');
-const { evaluateResponse, evaluateOverallInterview } = require('../services/geminiService');
+const User = require('../models/User');
+const ResumeProfile = require('../models/ResumeProfile');
+const {
+  evaluateResponse,
+  evaluateOverallInterview,
+  generateResumeInterviewQuestions,
+  evaluateCodeSubmission,
+  evaluateResumeInterviewOverall
+} = require('../services/geminiService');
+
+// ==========================================
+// VERSION 1: TOPIC-BASED INTERVIEWS
+// ==========================================
 
 /**
- * @desc    Start a new interview session
+ * @desc    Start a new topic-based interview session (Version 1)
  * @route   POST /api/interview/start
  * @access  Private
  */
@@ -24,8 +35,7 @@ const startInterview = async (req, res) => {
       return res.status(404).json({ success: false, message: `Topic "${topicTitle}" not found` });
     }
 
-    // Get 5 questions using Fisher-Yates randomization (limit = 5)
-    // We fetch questions for this topic and difficulty
+    // Fetch questions for this topic and difficulty
     const questions = await Question.find({
       topicId: topicObj._id,
       difficulty
@@ -38,8 +48,7 @@ const startInterview = async (req, res) => {
       });
     }
 
-    // Shuffle questions
-    // --- DSA IMPLEMENTATION: Fisher-Yates Shuffle ---
+    // Shuffle questions with Fisher-Yates
     const shuffled = [...questions];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -53,24 +62,20 @@ const startInterview = async (req, res) => {
     const interview = await Interview.create({
       userId: req.user.id,
       topic: topicObj.title,
+      interviewType: 'topic',
       difficulty,
-      status: 'completed', // Default status, updated on submit if terminated
+      status: 'completed',
       violationsCount: 0,
       violations: []
     });
 
-    // --- DSA IMPLEMENTATION: Queue ---
-    // Comment: The frontend maintains the interview flow as a Queue.
-    // The list of selected questions is sent as an array. The client processes them
-    // in a First-In-First-Out (FIFO) order: enqueuing the 5 questions, displaying
-    // the head of the queue (active question), and dequeuing it (shift) upon submission
-    // to move to the next item.
     return res.status(201).json({
       success: true,
       data: {
         interviewId: interview._id,
         topic: interview.topic,
         difficulty: interview.difficulty,
+        interviewType: 'topic',
         questions: interviewQuestions.map(q => ({
           _id: q._id,
           question: q.question
@@ -78,13 +83,13 @@ const startInterview = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error starting interview:', error);
+    console.error('Error starting topic interview:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
 /**
- * @desc    Submit candidate answers for evaluation
+ * @desc    Submit topic-based interview candidate answers for evaluation (Version 1)
  * @route   POST /api/interview/submit
  * @access  Private
  */
@@ -101,12 +106,10 @@ const submitInterview = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Interview session not found' });
     }
 
-    // Verify ownership
     if (interview.userId.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Not authorized to access this interview' });
     }
 
-    // Save violation info
     if (violations && Array.isArray(violations)) {
       interview.violations = violations.map(v => ({
         type: v.type,
@@ -116,19 +119,16 @@ const submitInterview = async (req, res) => {
     }
 
     if (status) {
-      interview.status = status; // e.g. 'terminated' or 'completed'
+      interview.status = status;
     }
 
     console.log(`Evaluating interview ${interviewId} (${interview.topic}). Violations: ${interview.violationsCount}`);
 
-    // Evaluate each response sequentially
     const evaluatedResponses = [];
     let sumScore = 0;
 
     for (let i = 0; i < responses.length; i++) {
       const resItem = responses[i];
-      
-      // Request evaluation from Gemini API (includes fallback inside the service)
       const evaluation = await evaluateResponse(
         resItem.question,
         resItem.answer,
@@ -137,38 +137,32 @@ const submitInterview = async (req, res) => {
 
       sumScore += evaluation.score;
 
-      // Save to database
       const savedResponse = await Response.create({
         interviewId,
         question: resItem.question,
         answer: resItem.answer || '',
+        category: 'technical',
+        responseType: 'verbal',
         evaluation
       });
 
       evaluatedResponses.push(savedResponse);
     }
 
-    // Calculate average score
     const totalResponses = responses.length;
     const finalScore = totalResponses > 0 ? Math.round(sumScore / totalResponses) : 0;
-
-    // Get overall feedback summary from Gemini
     const overallFeedback = await evaluateOverallInterview(evaluatedResponses);
 
-    // Check if any response was skipped or left unanswered (due to early termination)
     const hasSkippedResponses = responses.some(r => !r.answer || r.answer.trim() === '');
     const hasUnansweredQuestions = status === 'terminated' || responses.length < 5;
 
     if (hasSkippedResponses || hasUnansweredQuestions) {
-      if (!overallFeedback.suggestions) {
-        overallFeedback.suggestions = [];
-      }
+      if (!overallFeedback.suggestions) overallFeedback.suggestions = [];
       if (!overallFeedback.suggestions.includes("Try to answer, don't skip questions.")) {
         overallFeedback.suggestions.push("Try to answer, don't skip questions.");
       }
     }
 
-    // Update Interview details
     interview.score = finalScore;
     interview.feedback = {
       summary: overallFeedback.summary,
@@ -187,7 +181,7 @@ const submitInterview = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error submitting interview:', error);
+    console.error('Error submitting topic interview:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -199,7 +193,6 @@ const submitInterview = async (req, res) => {
  */
 const getHistory = async (req, res) => {
   try {
-    // Get interviews sorted by date descending (newest first)
     const interviews = await Interview.find({ userId: req.user.id }).sort({ date: -1 });
 
     return res.status(200).json({
@@ -221,18 +214,15 @@ const getHistory = async (req, res) => {
 const getInterviewDetails = async (req, res) => {
   try {
     const interviewId = req.params.id;
-
     const interview = await Interview.findById(interviewId);
     if (!interview) {
       return res.status(404).json({ success: false, message: 'Interview not found' });
     }
 
-    // Ensure authorized user
     if (interview.userId.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to view this interview' });
     }
 
-    // Fetch matching responses
     const responses = await Response.find({ interviewId });
 
     return res.status(200).json({
@@ -248,24 +238,24 @@ const getInterviewDetails = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Delete interview session
+ * @route   DELETE /api/interview/:id
+ * @access  Private
+ */
 const deleteInterview = async (req, res) => {
   try {
     const interviewId = req.params.id;
-
     const interview = await Interview.findById(interviewId);
     if (!interview) {
       return res.status(404).json({ success: false, message: 'Interview not found' });
     }
 
-    // Ensure authorized user
     if (interview.userId.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this interview' });
     }
 
-    // Delete related responses
     await Response.deleteMany({ interviewId });
-
-    // Delete the interview itself
     await Interview.findByIdAndDelete(interviewId);
 
     return res.status(200).json({
@@ -278,10 +268,327 @@ const deleteInterview = async (req, res) => {
   }
 };
 
+// ==========================================
+// VERSION 2: RESUME-BASED AI INTERVIEWS
+// ==========================================
+
+/**
+ * Cooldown helper to calculate eligibility (3-day lock, max 2 / week)
+ */
+const checkUserResumeEligibility = (user) => {
+  const stats = user.resumeInterviewStats || {};
+  const now = new Date();
+
+  // 1. Check 3-day cooldown
+  if (stats.cooldownUntil && new Date(stats.cooldownUntil) > now) {
+    const diffMs = new Date(stats.cooldownUntil).getTime() - now.getTime();
+    const hoursRemaining = Math.ceil(diffMs / (1000 * 60 * 60));
+    return {
+      eligible: false,
+      reason: 'cooldown_active',
+      cooldownUntil: stats.cooldownUntil,
+      hoursRemaining,
+      message: `Resume interview locked. Cooldown active for ${hoursRemaining} more hour(s).`
+    };
+  }
+
+  // 2. Check 7-day weekly window (Max 2 per week)
+  const windowStart = stats.weeklyWindowStart ? new Date(stats.weeklyWindowStart) : null;
+  const isWindowExpired = !windowStart || (now.getTime() - windowStart.getTime()) > (7 * 24 * 60 * 60 * 1000);
+
+  let currentWeeklyCount = stats.weeklyCount || 0;
+  if (isWindowExpired) {
+    currentWeeklyCount = 0;
+  }
+
+  if (currentWeeklyCount >= 2) {
+    const windowEnd = new Date(windowStart.getTime() + (7 * 24 * 60 * 60 * 1000));
+    const hoursToReset = Math.ceil((windowEnd.getTime() - now.getTime()) / (1000 * 60 * 60));
+    return {
+      eligible: false,
+      reason: 'weekly_limit_reached',
+      unlockTime: windowEnd,
+      hoursRemaining: hoursToReset,
+      message: `Weekly limit reached (2/2 completed). Resets in ${hoursToReset} hour(s).`
+    };
+  }
+
+  return {
+    eligible: true,
+    remainingWeekly: 2 - currentWeeklyCount,
+    cooldownUntil: stats.cooldownUntil,
+    weeklyCount: currentWeeklyCount
+  };
+};
+
+/**
+ * @desc    Check if user is eligible to start a Resume Interview
+ * @route   GET /api/interview/resume/eligibility
+ * @access  Private
+ */
+const getResumeEligibility = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const hasProfile = await ResumeProfile.exists({ userId: req.user.id });
+    const eligibility = checkUserResumeEligibility(user);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...eligibility,
+        hasUploadedResume: Boolean(hasProfile)
+      }
+    });
+  } catch (error) {
+    console.error('Error in getResumeEligibility:', error);
+    return res.status(500).json({ success: false, message: 'Server error checking eligibility' });
+  }
+};
+
+/**
+ * @desc    Start dynamic Resume-Based Interview Session (Version 2)
+ * @route   POST /api/interview/resume/start
+ * @access  Private
+ */
+const startResumeInterview = async (req, res) => {
+  try {
+    const { difficulty = 'Intermediate' } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // 1. Check Cooldown & Weekly limit
+    const eligibility = checkUserResumeEligibility(user);
+    if (!eligibility.eligible) {
+      return res.status(403).json({
+        success: false,
+        message: eligibility.message,
+        data: eligibility
+      });
+    }
+
+    // 2. Fetch User's Structured Resume Profile
+    const profile = await ResumeProfile.findOne({ userId: req.user.id });
+    if (!profile) {
+      return res.status(400).json({
+        success: false,
+        message: 'No resume profile found. Please upload your resume in the Resume Intelligence dashboard first.'
+      });
+    }
+
+    // 3. Generate dynamic question queue from structured profile
+    console.log(`[InterviewController] Generating resume-based questions for ${user.email} (${profile.targetRole || 'Full Stack Developer'})`);
+    const dynamicQuestions = await generateResumeInterviewQuestions(profile, difficulty);
+
+    // 4. Create Interview record
+    const interview = await Interview.create({
+      userId: req.user.id,
+      topic: `Resume Interview — ${profile.targetRole || 'Personalized'}`,
+      interviewType: 'resume',
+      resumeProfileId: profile._id,
+      targetRole: profile.targetRole || 'Full Stack Developer',
+      difficulty,
+      status: 'completed',
+      violationsCount: 0,
+      violations: []
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Resume-Based Interview session started!',
+      data: {
+        interviewId: interview._id,
+        topic: interview.topic,
+        interviewType: 'resume',
+        targetRole: interview.targetRole,
+        difficulty: interview.difficulty,
+        questions: dynamicQuestions
+      }
+    });
+  } catch (error) {
+    console.error('Error in startResumeInterview:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+/**
+ * @desc    Run and evaluate code submission in real-time
+ * @route   POST /api/interview/resume/code-run
+ * @access  Private
+ */
+const runCodeEvaluation = async (req, res) => {
+  try {
+    const { question, code, language, testCases } = req.body;
+
+    if (!question || !code) {
+      return res.status(400).json({ success: false, message: 'Please provide question and code.' });
+    }
+
+    const evaluation = await evaluateCodeSubmission(question, code, language || 'javascript', testCases || []);
+
+    return res.status(200).json({
+      success: true,
+      data: evaluation
+    });
+  } catch (error) {
+    console.error('Error running code evaluation:', error);
+    return res.status(500).json({ success: false, message: 'Failed to evaluate code.' });
+  }
+};
+
+/**
+ * @desc    Submit Resume Interview with 8-metric evaluation & update cooldown
+ * @route   POST /api/interview/resume/submit
+ * @access  Private
+ */
+const submitResumeInterview = async (req, res) => {
+  try {
+    const { interviewId, responses, violations, status } = req.body;
+
+    if (!interviewId || !responses || !Array.isArray(responses)) {
+      return res.status(400).json({ success: false, message: 'Please provide interview ID and responses' });
+    }
+
+    const interview = await Interview.findById(interviewId);
+    if (!interview) {
+      return res.status(404).json({ success: false, message: 'Interview session not found' });
+    }
+
+    if (interview.userId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (violations && Array.isArray(violations)) {
+      interview.violations = violations.map(v => ({
+        type: v.type,
+        timestamp: v.timestamp || new Date()
+      }));
+      interview.violationsCount = violations.length;
+    }
+
+    if (status) {
+      interview.status = status;
+    }
+
+    const user = await User.findById(req.user.id);
+    const profile = await ResumeProfile.findOne({ userId: req.user.id });
+
+    const evaluatedResponses = [];
+    let sumScore = 0;
+
+    for (let i = 0; i < responses.length; i++) {
+      const resItem = responses[i];
+      let evaluation = null;
+
+      if (resItem.responseType === 'coding' || resItem.type === 'coding' || resItem.code) {
+        evaluation = await evaluateCodeSubmission(
+          resItem.question,
+          resItem.code || resItem.answer,
+          resItem.language || 'javascript',
+          resItem.testCases || []
+        );
+      } else {
+        evaluation = await evaluateResponse(
+          resItem.question,
+          resItem.answer || '',
+          interview.difficulty
+        );
+      }
+
+      sumScore += evaluation.score || 0;
+
+      const savedResponse = await Response.create({
+        interviewId,
+        question: resItem.question,
+        category: resItem.category || 'technical',
+        responseType: resItem.responseType || resItem.type || 'verbal',
+        code: resItem.code || '',
+        language: resItem.language || 'javascript',
+        testCaseResults: evaluation.testCaseResults || [],
+        answer: resItem.answer || '',
+        evaluation
+      });
+
+      evaluatedResponses.push(savedResponse);
+    }
+
+    const finalScore = responses.length > 0 ? Math.round(sumScore / responses.length) : 0;
+    const overallReport = await evaluateResumeInterviewOverall(evaluatedResponses, profile);
+
+    interview.score = finalScore;
+    interview.metrics = {
+      resumeUnderstanding: overallReport.metrics?.resumeUnderstanding || finalScore,
+      projectKnowledge: overallReport.metrics?.projectKnowledge || finalScore,
+      technicalDepth: overallReport.metrics?.technicalDepth || finalScore,
+      problemSolving: overallReport.metrics?.problemSolving || finalScore,
+      communication: overallReport.metrics?.communication || finalScore,
+      confidence: overallReport.metrics?.confidence || finalScore,
+      domainKnowledge: overallReport.metrics?.domainKnowledge || finalScore,
+      employabilityScore: overallReport.metrics?.employabilityScore || finalScore
+    };
+    interview.feedback = {
+      summary: overallReport.summary,
+      strengths: overallReport.strengths,
+      weaknesses: overallReport.weaknesses,
+      suggestions: overallReport.suggestions
+    };
+
+    await interview.save();
+
+    // Update User Cooldown & Weekly window
+    const now = new Date();
+    const cooldownDurationMs = 3 * 24 * 60 * 60 * 1000; // 3 days lock
+    const cooldownUntil = new Date(now.getTime() + cooldownDurationMs);
+
+    const stats = user.resumeInterviewStats || {};
+    const windowStart = stats.weeklyWindowStart ? new Date(stats.weeklyWindowStart) : null;
+    const isWindowExpired = !windowStart || (now.getTime() - windowStart.getTime()) > (7 * 24 * 60 * 60 * 1000);
+
+    const newWeeklyWindowStart = isWindowExpired ? now : windowStart;
+    const newWeeklyCount = isWindowExpired ? 1 : ((stats.weeklyCount || 0) + 1);
+
+    await User.findByIdAndUpdate(req.user.id, {
+      resumeInterviewStats: {
+        lastInterviewDate: now,
+        cooldownUntil: cooldownUntil,
+        weeklyCount: newWeeklyCount,
+        weeklyWindowStart: newWeeklyWindowStart
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Resume interview evaluated and submitted successfully!',
+      data: {
+        interview,
+        responses: evaluatedResponses,
+        cooldown: {
+          cooldownUntil,
+          weeklyCount: newWeeklyCount,
+          remainingWeekly: Math.max(0, 2 - newWeeklyCount)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error submitting resume interview:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
 module.exports = {
   startInterview,
   submitInterview,
   getHistory,
   getInterviewDetails,
-  deleteInterview
+  deleteInterview,
+  getResumeEligibility,
+  startResumeInterview,
+  runCodeEvaluation,
+  submitResumeInterview
 };

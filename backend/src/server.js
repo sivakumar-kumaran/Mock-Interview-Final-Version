@@ -31,6 +31,7 @@ const questionRoutes = require('./routes/questionRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const resumeRoutes = require('./routes/resumeRoutes');
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
@@ -38,6 +39,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/interview', interviewRoutes);
+app.use('/api/resume', resumeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 

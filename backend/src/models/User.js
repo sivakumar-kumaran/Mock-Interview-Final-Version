@@ -26,6 +26,28 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  avatarUrl: {
+    type: String,
+    default: ''
+  },
+  phone: {
+    type: String,
+    default: ''
+  },
+  hasUploadedResume: {
+    type: Boolean,
+    default: false
+  },
+  targetRole: {
+    type: String,
+    default: 'Full Stack Developer'
+  },
+  resumeInterviewStats: {
+    lastInterviewDate: { type: Date, default: null },
+    cooldownUntil: { type: Date, default: null },
+    weeklyCount: { type: Number, default: 0 },
+    weeklyWindowStart: { type: Date, default: null }
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -20,12 +20,51 @@ The interface features a premium SaaS dashboard aesthetic utilizing the followin
 
 ## 🚀 Key Features
 
+### Phase 1: Core Mock Platform
 1. **AI-Powered Evaluation**: Utilizes the Google Gemini Pro API (`gemini-1.5-flash`) to parse transcripts and grade them across six criteria: Technical Accuracy, Keyword Coverage, Communication, Confidence, Clarity, and Completeness.
 2. **Speech-To-Text Audio Recording**: Uses HTML5 MediaRecorder APIs and browser Web Speech Recognition to translate voice responses to text, with fallback text inputs for compatibility.
 3. **Assessment Integrity Monitoring**: Enforces Full Screen, and logs warnings for tab-switching or focus blur. Auto-submits on 3 violations to log compliance.
 4. **Performance Dashboard**: Real-time visual graphs mapping historical trend lines and topic competence bars.
 5. **Interactive Question Bank**: Fisher-Yates Shuffler that handles randomised, non-duplicate query logs across 12 tech and HR fields.
 6. **Full CRUD Admin Workspace**: Manage topics, seed question sheets, and query active user rosters.
+
+---
+
+### 🌟 Phase 2: Resume-Based AI Interview Workflows (Intelligence Engine)
+
+1. **PDF Resume Parsing & Extraction Engine**:
+   - High-precision PDF parser with NLP regex rule engine extracting genuine candidate contact links (GitHub, LinkedIn, LeetCode, Portfolio), work history, projects, and certifications.
+   - Strict sanitization: Zero synthetic/phantom URLs or duplicate projects.
+
+2. **Categorized Skills Architecture**:
+   - Skills are automatically deduplicated and cataloged into structured categories:
+     - **Languages & Core**: *Java, Python, JavaScript, TypeScript, C++, SQL, DSA, OOP*
+     - **Frameworks & Web**: *React, Next.js, Node.js, Express, Spring Boot, Django*
+     - **Databases & Storage**: *MongoDB, MySQL, PostgreSQL, Redis, SQLite*
+     - **Developer Tools**: *Git, GitHub, Docker, Kubernetes, AWS, Vercel*
+     - **Soft Skills & Practices**: *Problem Solving, Communication, Agile*
+
+3. **AI-Assigned Target Role Detection**:
+   - Automatically maps candidate projects, tech stacks, and experience to their target job role (e.g., *Full Stack Developer*, *AI/ML Engineer*, *Java Developer*, *Backend Engineer*).
+
+4. **Adaptive 6-Stage Contextual Interview Pipeline**:
+   - **Stage 1 (Intro & Projects)**: Deep dive into the candidate's actual resume projects, technical tradeoffs, and architectural decisions.
+   - **Stage 2 (Core Tech)**: In-depth questions based on extracted languages and framework proficiencies.
+   - **Stage 3 (Compulsory SQL Challenge)**: Hands-on database query problem with 10-minute timer.
+   - **Stage 4 (Algorithmic Coding Challenge)**: Live coding test with embedded Monaco Code Editor, automated testcases, and multi-language execution (Java, Python, JS, SQL).
+   - **Stage 5 (System Architecture & Scalability)**: High-level design and database schema questions.
+   - **Stage 6 (Behavioral & HR)**: STAR-method leadership and teamwork scenario questions.
+
+5. **Interactive Zero-Scroll Interview Room**:
+   - **Top Full-Width Question Banner**: Real-time question prompt with audio replay.
+   - **Dual Synchronized Screens**:
+     - **AI Interviewer**: Holographic avatar with concentric animated speaking waves and live audio equalizer.
+     - **Candidate Webcam**: Live video stream with glowing soundwave indicators when speaking.
+   - **Fixed Bottom Control Dock**: Instant speech-to-text transcript input, recording controls, word counters, and quick actions without page scroll.
+
+6. **Resume Versioning & Skill Growth Tracking**:
+   - Automatically snapshots resume versions upon replacement.
+   - Calculates skill delta (`skillsAddedSinceLastVersion`) to visualize candidate learning and readiness growth across resume iterations.
 
 ---
 

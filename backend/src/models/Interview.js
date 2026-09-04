@@ -10,6 +10,19 @@ const interviewSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  interviewType: {
+    type: String,
+    enum: ['topic', 'resume'],
+    default: 'topic'
+  },
+  resumeProfileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ResumeProfile'
+  },
+  targetRole: {
+    type: String,
+    default: ''
+  },
   difficulty: {
     type: String,
     enum: ['Beginner', 'Intermediate', 'Advanced'],
@@ -40,6 +53,16 @@ const interviewSchema = new mongoose.Schema({
       }
     }
   ],
+  metrics: {
+    resumeUnderstanding: { type: Number, default: 0 },
+    projectKnowledge: { type: Number, default: 0 },
+    technicalDepth: { type: Number, default: 0 },
+    problemSolving: { type: Number, default: 0 },
+    communication: { type: Number, default: 0 },
+    confidence: { type: Number, default: 0 },
+    domainKnowledge: { type: Number, default: 0 },
+    employabilityScore: { type: Number, default: 0 }
+  },
   feedback: {
     summary: { type: String, default: '' },
     strengths: { type: [String], default: [] },

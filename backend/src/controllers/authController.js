@@ -55,6 +55,9 @@ const register = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          avatarUrl: user.avatarUrl || '',
+          targetRole: user.targetRole || 'Full Stack Developer',
+          hasUploadedResume: user.hasUploadedResume || false,
           token: generateToken(user._id)
         }
       });
@@ -104,6 +107,9 @@ const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatarUrl: user.avatarUrl || '',
+        targetRole: user.targetRole || 'Full Stack Developer',
+        hasUploadedResume: user.hasUploadedResume || false,
         token: generateToken(user._id)
       }
     });

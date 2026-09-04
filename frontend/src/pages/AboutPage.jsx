@@ -53,13 +53,13 @@ const AboutPage = () => {
       </section>
 
       {/* Problem + Solution */}
-      <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+      <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="grid md:grid-cols-2 gap-8">
           {/* Problem */}
           <div className="bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-2xl p-8">
             <h3 className="text-lg font-outfit font-bold text-red-700 dark:text-red-400 mb-4">The Problem</h3>
             <ul className="space-y-3 text-sm text-red-800/80 dark:text-red-300/80">
-              {['Lack of real interview practice', 'No personalized feedback', 'Fear of speaking and poor communication', 'Memorizing answers without understanding', 'No access to realistic exam simulations'].map((item, i) => (
+              {['Lack of real interview practice', 'Generic questions unrelated to candidate resumes', 'Fear of speaking and poor communication', 'Memorizing answers without hands-on coding/SQL', 'No access to realistic exam simulations'].map((item, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-400 dark:bg-red-500 shrink-0"></span>
                   {item}
@@ -71,7 +71,7 @@ const AboutPage = () => {
           <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-2xl p-8">
             <h3 className="text-lg font-outfit font-bold text-emerald-700 dark:text-emerald-400 mb-4">Our Solution</h3>
             <ul className="space-y-3 text-sm text-emerald-800/80 dark:text-emerald-300/80">
-              {['Realistic AI-driven interview simulations', 'Instant per-question AI feedback & scoring', 'Speech recording with live transcription', 'Full-screen integrity enforcement', 'Performance analytics and progress tracking'].map((item, i) => (
+              {['Resume-tailored AI interview simulations', 'Multi-stage pipeline: Resume, Tech, SQL & Coding', 'Categorized skills & project verification', 'Interactive zero-scroll room with speaking animations', 'Per-question scoring & actionable growth analytics'].map((item, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-400 dark:bg-emerald-500 shrink-0"></span>
                   {item}
@@ -79,6 +79,107 @@ const AboutPage = () => {
               ))}
             </ul>
           </div>
+        </div>
+      </section>
+
+      {/* Phase 2: Resume-Based Interview Workflow */}
+      <section className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="bg-gradient-to-br from-emerald-500/10 via-brand-purple/5 to-cyan-500/10 border border-emerald-500/30 dark:border-emerald-500/20 rounded-3xl p-8 sm:p-12 shadow-xl space-y-10">
+          
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 text-xs font-extrabold uppercase tracking-wider">
+              🚀 Phase 2 Intelligence
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-outfit font-extrabold text-brand-charcoal dark:text-dark-text">
+              Resume-Based Interview Workflows
+            </h2>
+            <p className="text-sm sm:text-base text-brand-slate dark:text-dark-muted leading-relaxed">
+              Experience dynamic, hyper-personalized mock interviews generated directly from your uploaded PDF resume. Our intelligent pipeline parses real candidate data and orchestrates a 6-stage technical interview.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Step 1 */}
+            <div className="p-6 rounded-2xl bg-white/80 dark:bg-dark-card/80 border border-brand-border dark:border-dark-border space-y-3 shadow-sm hover:border-emerald-500 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
+                01
+              </div>
+              <h3 className="font-outfit font-bold text-base text-brand-charcoal dark:text-dark-text">
+                PDF Extraction & NLP Parsing
+              </h3>
+              <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                Raw PDF extraction powered by rule-based NLP extracts exact candidate details, GitHub/LinkedIn links, experiences, projects, and certifications without generating phantom data.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="p-6 rounded-2xl bg-white/80 dark:bg-dark-card/80 border border-brand-border dark:border-dark-border space-y-3 shadow-sm hover:border-brand-purple transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-brand-purple/10 text-brand-purple dark:text-dark-purple flex items-center justify-center font-bold text-sm">
+                02
+              </div>
+              <h3 className="font-outfit font-bold text-base text-brand-charcoal dark:text-dark-text">
+                Categorized Skill Engine
+              </h3>
+              <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                Skills are intelligently cataloged into distinct categorical groups: Languages & Core, Frameworks & Web, Databases & Storage, Developer Tools, and Soft Skills.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="p-6 rounded-2xl bg-white/80 dark:bg-dark-card/80 border border-brand-border dark:border-dark-border space-y-3 shadow-sm hover:border-cyan-500 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-sm">
+                03
+              </div>
+              <h3 className="font-outfit font-bold text-base text-brand-charcoal dark:text-dark-text">
+                AI Target Role Prediction
+              </h3>
+              <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                Gemini AI automatically analyzes your tech stack and past project complexity to predict and assign your optimal target role (e.g., Full Stack Developer, AI/ML Engineer, DevOps).
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="p-6 rounded-2xl bg-white/80 dark:bg-dark-card/80 border border-brand-border dark:border-dark-border space-y-3 shadow-sm hover:border-amber-500 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm">
+                04
+              </div>
+              <h3 className="font-outfit font-bold text-base text-brand-charcoal dark:text-dark-text">
+                6-Stage Adaptive Question Flow
+              </h3>
+              <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                Generates a structured sequence: (1) Project Walkthrough, (2) Core Tech Deep Dive, (3) Compulsory SQL Challenge, (4) Live Algorithmic Coding, (5) System Architecture, and (6) Behavioral HR.
+              </p>
+            </div>
+
+            {/* Step 5 */}
+            <div className="p-6 rounded-2xl bg-white/80 dark:bg-dark-card/80 border border-brand-border dark:border-dark-border space-y-3 shadow-sm hover:border-teal-500 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">
+                05
+              </div>
+              <h3 className="font-outfit font-bold text-base text-brand-charcoal dark:text-dark-text">
+                Interactive Zero-Scroll Room
+              </h3>
+              <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                A single-screen interactive room with synchronized speech synthesis, animated audio waveform visualizers, webcam proctoring, and instant speech-to-text live transcription.
+              </p>
+            </div>
+
+            {/* Step 6 */}
+            <div className="p-6 rounded-2xl bg-white/80 dark:bg-dark-card/80 border border-brand-border dark:border-dark-border space-y-3 shadow-sm hover:border-rose-500 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-sm">
+                06
+              </div>
+              <h3 className="font-outfit font-bold text-base text-brand-charcoal dark:text-dark-text">
+                Resume Versioning & Growth
+              </h3>
+              <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                Every resume revision is snapshotted into version history. Tracks new skills mastered, project evolution, and readiness growth across multiple resume iterations.
+              </p>
+            </div>
+
+          </div>
+
         </div>
       </section>
 
