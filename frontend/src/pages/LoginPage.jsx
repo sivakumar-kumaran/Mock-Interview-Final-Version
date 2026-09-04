@@ -13,21 +13,6 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const enterFullscreen = () => {
-    const docEl = document.documentElement;
-    const requestMethod =
-      docEl.requestFullscreen ||
-      docEl.webkitRequestFullscreen ||
-      docEl.mozRequestFullScreen ||
-      docEl.msRequestFullscreen;
-
-    if (requestMethod) {
-      requestMethod.call(docEl).catch((err) => {
-        console.error('Error enabling fullscreen mode:', err);
-      });
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -36,9 +21,6 @@ const LoginPage = () => {
       return;
     }
 
-    // Enter fullscreen mode on user login click gesture
-    enterFullscreen();
-
     setLoading(true);
     const res = await login(email, password);
     setLoading(false);
@@ -46,19 +28,6 @@ const LoginPage = () => {
     if (res?.success) {
       navigate('/dashboard');
     } else {
-      // Exit fullscreen if login failed
-      if (document.fullscreenElement) {
-        const exitMethod =
-          document.exitFullscreen ||
-          document.webkitExitFullscreen ||
-          document.mozCancelFullScreen ||
-          document.msExitFullscreen;
-        if (exitMethod) {
-          exitMethod.call(document).catch((err) => {
-            console.error('Error exiting fullscreen on failed login:', err);
-          });
-        }
-      }
       setToast({ message: res?.message || 'Login failed', type: 'error' });
     }
   };

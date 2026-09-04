@@ -15,8 +15,23 @@ export const InterviewProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [interviewMode, setInterviewMode] = useState('ai'); // 'ai' or 'practice'
+  const [resumeEligibility, setResumeEligibility] = useState(null);
 
-  // Initialize/start the interview session
+  // Check resume interview eligibility (cooldown & weekly limits)
+  const checkResumeEligibility = async () => {
+    try {
+      const res = await axios.get('/api/interview/resume/eligibility');
+      if (res.data.success) {
+        setResumeEligibility(res.data.data);
+        return res.data.data;
+      }
+    } catch (err) {
+      console.error('Error fetching resume eligibility:', err);
+      return null;
+    }
+  };
+
+  // Initialize/start Version 1 topic interview
   const startNewInterview = async (topicTitle, difficulty, mode = 'ai') => {
     setInterviewMode(mode);
     setLoading(true);
@@ -30,7 +45,10 @@ export const InterviewProvider = ({ children }) => {
     try {
       const res = await axios.post('/api/interview/start', { topicTitle, difficulty });
       if (res.data.success) {
-        setActiveInterview(res.data.data);
+        setActiveInterview({
+          ...res.data.data,
+          interviewType: 'topic'
+        });
         setInterviewStatus('active');
         setLoading(false);
         return { success: true };
@@ -43,6 +61,53 @@ export const InterviewProvider = ({ children }) => {
     }
   };
 
+  // Initialize/start Version 2 Resume-Based Interview
+  const startResumeInterview = async (difficulty = 'Intermediate') => {
+    setInterviewMode('ai');
+    setLoading(true);
+    setError(null);
+    setResponses([]);
+    setViolations([]);
+    setCurrentQuestionIndex(0);
+    setFeedback(null);
+    setInterviewStatus('idle');
+
+    try {
+      const res = await axios.post('/api/interview/resume/start', { difficulty });
+      if (res.data.success) {
+        setActiveInterview({
+          ...res.data.data,
+          interviewType: 'resume'
+        });
+        setInterviewStatus('active');
+        setLoading(false);
+        return { success: true };
+      }
+    } catch (err) {
+      console.error('Error starting resume interview:', err);
+      const errMsg = err.response?.data?.message || 'Failed to start Resume Interview.';
+      setError(errMsg);
+      setLoading(false);
+      return { success: false, message: errMsg, data: err.response?.data?.data };
+    }
+  };
+
+  // Run candidate code against test cases in real-time
+  const runCode = async (question, code, language, testCases) => {
+    try {
+      const res = await axios.post('/api/interview/resume/code-run', {
+        question,
+        code,
+        language,
+        testCases
+      });
+      return res.data;
+    } catch (err) {
+      console.error('Error running code:', err);
+      return { success: false, message: 'Failed to run code evaluation' };
+    }
+  };
+
   // Log a security / integrity violation
   const logViolation = (type) => {
     const newViolation = { type, timestamp: new Date() };
@@ -51,7 +116,6 @@ export const InterviewProvider = ({ children }) => {
       
       // Auto terminate if violations exceed 3
       if (updated.length >= 3) {
-        // Trigger auto submit in the next tick
         setTimeout(() => {
           terminateInterviewEarly(updated);
         }, 100);
@@ -67,14 +131,17 @@ export const InterviewProvider = ({ children }) => {
     setLoading(true);
 
     try {
+      const isResume = activeInterview?.interviewType === 'resume';
+      const endpoint = isResume ? '/api/interview/resume/submit' : '/api/interview/submit';
+
       const payload = {
         interviewId: activeInterview.interviewId,
-        responses: responses, // Submit whatever was completed so far
+        responses: responses,
         violations: currentViolations,
         status: 'terminated'
       };
 
-      const res = await axios.post('/api/interview/submit', payload);
+      const res = await axios.post(endpoint, payload);
       if (res.data.success) {
         setFeedback(res.data.data);
         setInterviewStatus('feedback');
@@ -88,14 +155,28 @@ export const InterviewProvider = ({ children }) => {
   };
 
   // Submit answer for active question and advance the flow
-  const submitActiveAnswer = async (answerText) => {
+  const submitActiveAnswer = async (answerText, codeSubmission = null) => {
     if (!activeInterview) return;
 
     const currentQuestion = activeInterview.questions[currentQuestionIndex];
-    const newResponse = {
+    
+    let newResponse = {
       question: currentQuestion.question,
+      category: currentQuestion.category || 'technical',
+      responseType: currentQuestion.type || 'verbal',
       answer: answerText || ''
     };
+
+    if (codeSubmission) {
+      newResponse = {
+        ...newResponse,
+        responseType: 'coding',
+        code: codeSubmission.code || '',
+        language: codeSubmission.language || 'javascript',
+        testCases: currentQuestion.testCases || [],
+        answer: codeSubmission.code || answerText || ''
+      };
+    }
 
     const updatedResponses = [...responses, newResponse];
     setResponses(updatedResponses);
@@ -109,6 +190,9 @@ export const InterviewProvider = ({ children }) => {
       setLoading(true);
 
       try {
+        const isResume = activeInterview?.interviewType === 'resume';
+        const endpoint = isResume ? '/api/interview/resume/submit' : '/api/interview/submit';
+
         const payload = {
           interviewId: activeInterview.interviewId,
           responses: updatedResponses,
@@ -116,10 +200,13 @@ export const InterviewProvider = ({ children }) => {
           status: 'completed'
         };
 
-        const res = await axios.post('/api/interview/submit', payload);
+        const res = await axios.post(endpoint, payload);
         if (res.data.success) {
           setFeedback(res.data.data);
           setInterviewStatus('feedback');
+          if (isResume) {
+            checkResumeEligibility(); // refresh cooldown state
+          }
         }
       } catch (err) {
         console.error('Error submitting interview responses:', err);
@@ -150,7 +237,11 @@ export const InterviewProvider = ({ children }) => {
     loading,
     error,
     interviewMode,
+    resumeEligibility,
+    checkResumeEligibility,
     startNewInterview,
+    startResumeInterview,
+    runCode,
     submitActiveAnswer,
     logViolation,
     terminateInterviewEarly,
@@ -163,3 +254,4 @@ export const InterviewProvider = ({ children }) => {
     </InterviewContext.Provider>
   );
 };
+

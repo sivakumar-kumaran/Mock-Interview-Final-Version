@@ -6,12 +6,15 @@
 
 @layer base {
   body {
-    @apply text-brand-slate bg-white transition-colors duration-300;
+    background-color: #ffffff;
+    color: #475569;
+    transition: background-color 0.3s, color 0.3s;
   }
 
   .dark body,
   html.dark body {
-    @apply bg-dark-bg text-dark-muted;
+    background-color: #0F172A;
+    color: #94A3B8;
   }
 }
 
@@ -233,7 +236,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   opacity: 1;
 }
 
-/* ========== SLIDE UP ANIMATION ========== */
+/* ========== SLIDE & SPIN UP ANIMATIONS ========== */
 @keyframes slideUp {
   0% { opacity: 0; transform: translateY(20px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -241,6 +244,121 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
 .animate-slide-up {
   animation: slideUp 0.4s ease-out;
+}
+
+@keyframes spinUpGlow {
+  0% {
+    opacity: 0;
+    transform: translateY(35px) scale(0.92) rotate(-2deg);
+    filter: blur(4px);
+  }
+  65% {
+    transform: translateY(-6px) scale(1.02) rotate(0.8deg);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+.animate-spin-up {
+  animation: spinUpGlow 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes floatSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-float-subtle {
+  animation: floatSubtle 4s ease-in-out infinite;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 10s linear infinite;
+}
+
+/* ========== VERSION 2 RESUMEAI EMERALD THEME ========== */
+html.version-2 body,
+.version-2 body {
+  background-color: #020B0E !important;
+  color: #94A3B8;
+}
+
+.version-2 .bg-white,
+.version-2.dark .bg-dark-bg,
+.version-2 .bg-brand-surface {
+  background-color: #020B0E !important;
+}
+
+.version-2 .dark\:bg-dark-card,
+.version-2 .bg-dark-card,
+.version-2 .dark\:bg-dark-surface,
+.version-2 .glass-panel {
+  background-color: #051419 !important;
+  border-color: rgba(16, 185, 129, 0.22) !important;
+}
+
+.version-2 .border-brand-border,
+.version-2 .dark\:border-dark-border {
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+/* Green Span & Gradient Highlights */
+.version-2 .text-brand-purple,
+.version-2 .dark\:text-dark-purple,
+.version-2 .text-brand-blue,
+.version-2 .dark\:text-dark-blue {
+  color: #00F5A0 !important;
+}
+
+.version-2 .bg-brand-purple,
+.version-2 .dark\:bg-dark-purple,
+.version-2 .bg-brand-purpleHover,
+.version-2 .dark\:hover\:bg-dark-purpleHover {
+  background: linear-gradient(135deg, #00F5A0 0%, #059669 100%) !important;
+  color: #020B0E !important;
+  font-weight: 700;
+  box-shadow: 0 0 25px rgba(0, 245, 160, 0.4) !important;
+}
+
+.version-2 .bg-brand-purple-light,
+.version-2 .dark\:bg-dark-purple\/20 {
+  background-color: rgba(0, 245, 160, 0.12) !important;
+  color: #00F5A0 !important;
+  border: 1px solid rgba(0, 245, 160, 0.3) !important;
+}
+
+.version-2 .shadow-purple-glow,
+.version-2 .dark\:shadow-neon-purple {
+  box-shadow: 0 0 30px rgba(0, 245, 160, 0.45) !important;
+}
+
+.version-2 .glow-blue {
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.35) 0%, rgba(20, 184, 166, 0) 70%) !important;
+}
+
+.version-2 .glow-purple {
+  background: radial-gradient(circle, rgba(0, 245, 160, 0.3) 0%, rgba(0, 245, 160, 0) 70%) !important;
+}
+
+.version-2 .ai-avatar-orb {
+  background: conic-gradient(from 0deg, #00F5A0, #059669, #22D3EE, #10B981, #00F5A0) !important;
+}
+
+.version-2 .ai-thinking-dots span {
+  background: #00F5A0 !important;
+}
+
+.version-2 .text-green-span {
+  color: #00F5A0 !important;
+  font-weight: 700;
 }
 
 /* ========== AI THINKING DOTS ========== */

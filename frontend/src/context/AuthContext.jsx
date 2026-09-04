@@ -32,7 +32,17 @@ export const AuthProvider = ({ children }) => {
           const res = await axios.get('/api/user/profile');
           if (res.data.success) {
             // Keep user profile up to date
-            const updatedUser = { ...parsed, name: res.data.data.profile.name, email: res.data.data.profile.email, role: res.data.data.profile.role };
+            const profile = res.data.data.profile;
+            const updatedUser = {
+              ...parsed,
+              name: profile.name,
+              email: profile.email,
+              role: profile.role,
+              avatarUrl: profile.avatarUrl || '',
+              phone: profile.phone || '',
+              targetRole: profile.targetRole || 'Full Stack Developer',
+              hasUploadedResume: profile.hasUploadedResume || false
+            };
             setUser(updatedUser);
             localStorage.setItem('mock_interview_user', JSON.stringify(updatedUser));
           }

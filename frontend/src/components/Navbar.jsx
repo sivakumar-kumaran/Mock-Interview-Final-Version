@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Menu, X, User, LogOut, LayoutDashboard, HelpCircle, FileText, Settings, ShieldAlert, Cpu, Sun, Moon, Info, Home, Brain, Maximize, Minimize } from 'lucide-react';
+import { Menu, X, User, LogOut, LayoutDashboard, HelpCircle, FileText, Settings, ShieldAlert, Cpu, Sun, Moon, Info, Home, Brain, Maximize, Minimize, Sparkles } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, isVersion2, switchVersion } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -122,8 +122,9 @@ const Navbar = () => {
             })}
           </div>
 
-          {/* Right section: Theme toggle + Auth */}
+          {/* Right section: Theme toggle + Fullscreen + Auth */}
           <div className="hidden md:flex items-center gap-3">
+            
             {/* Dark mode toggle */}
             <button
               onClick={toggleTheme}
@@ -149,9 +150,17 @@ const Navbar = () => {
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-brand-surface dark:hover:bg-dark-card transition-all"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white font-outfit font-bold text-sm shadow-purple-glow">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full object-cover border border-brand-purple dark:border-dark-purple shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white font-outfit font-bold text-sm shadow-purple-glow">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div className="text-left leading-none">
                     <p className="text-xs font-semibold text-brand-charcoal dark:text-dark-text">{user.name}</p>
                     <span className="text-[10px] text-brand-slate dark:text-dark-muted capitalize">{user.role}</span>
@@ -189,18 +198,13 @@ const Navbar = () => {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-medium text-brand-charcoal dark:text-dark-text hover:text-brand-purple dark:hover:text-dark-purple transition-colors"
+                  className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-brand-purple hover:bg-brand-purpleHover dark:bg-dark-purple dark:hover:bg-dark-purpleHover rounded-xl shadow-premium dark:shadow-neon-purple transition-all duration-200 hover:translate-y-[-1px] active:translate-y-[0px]"
                 >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-brand-purple hover:bg-brand-purpleHover dark:bg-dark-purple dark:hover:bg-dark-purpleHover rounded-xl shadow-premium dark:shadow-neon-purple transition-all duration-200 hover:translate-y-[-1px] active:translate-y-[0px]"
-                >
-                  Get Started
+                  <User size={15} />
+                  <span>Sign In / Sign Up</span>
                 </Link>
               </div>
             )}
@@ -260,9 +264,17 @@ const Navbar = () => {
             {user ? (
               <div className="pt-4 pb-2 border-t border-brand-border dark:border-dark-border mt-4 px-3">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white font-outfit font-bold">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className="w-10 h-10 rounded-full object-cover border border-brand-purple dark:border-dark-purple"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white font-outfit font-bold">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div>
                     <h4 className="font-semibold text-brand-charcoal dark:text-dark-text">{user.name}</h4>
                     <p className="text-xs text-brand-slate dark:text-dark-muted">{user.email}</p>
@@ -289,16 +301,9 @@ const Navbar = () => {
                 <Link
                   to="/login"
                   onClick={() => setIsOpen(false)}
-                  className="w-full py-2.5 text-center text-brand-charcoal dark:text-dark-text font-semibold hover:bg-brand-surface dark:hover:bg-dark-card rounded-lg transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setIsOpen(false)}
                   className="w-full py-2.5 text-center text-white bg-brand-purple dark:bg-dark-purple font-semibold hover:bg-brand-purpleHover dark:hover:bg-dark-purpleHover rounded-lg shadow-premium dark:shadow-neon-purple transition-all"
                 >
-                  Get Started
+                  Sign In / Sign Up
                 </Link>
               </div>
             )}

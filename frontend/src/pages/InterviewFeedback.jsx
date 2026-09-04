@@ -238,6 +238,56 @@ const InterviewFeedback = () => {
         </div>
       )}
 
+      {/* 8 Resume Metrics Grid (if Resume Interview) */}
+      {interview.interviewType === 'resume' && interview.metrics && (
+        <div className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-premium dark:shadow-dark-card space-y-5">
+          <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
+            <div>
+              <h3 className="font-outfit font-extrabold text-xl text-brand-charcoal dark:text-dark-text">
+                8-Dimension Resume Competency Evaluation
+              </h3>
+              <p className="text-xs text-brand-slate dark:text-dark-muted">
+                Multi-metric assessment based on your project execution, technical depth, and problem solving
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-xs text-brand-slate dark:text-dark-muted block">Employability Score</span>
+              <span className="text-2xl font-black font-outfit text-brand-purple dark:text-dark-purple">
+                {interview.metrics.employabilityScore || interview.score}%
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: 'Resume Understanding', val: interview.metrics.resumeUnderstanding },
+              { label: 'Project Knowledge', val: interview.metrics.projectKnowledge },
+              { label: 'Technical Depth', val: interview.metrics.technicalDepth },
+              { label: 'Problem Solving', val: interview.metrics.problemSolving },
+              { label: 'Communication', val: interview.metrics.communication },
+              { label: 'Confidence', val: interview.metrics.confidence },
+              { label: 'Domain Knowledge', val: interview.metrics.domainKnowledge },
+              { label: 'Employability Score', val: interview.metrics.employabilityScore }
+            ].map((m, i) => (
+              <div key={i} className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border text-center space-y-1">
+                <span className="text-[11px] font-semibold text-brand-slate dark:text-dark-muted block truncate">
+                  {m.label}
+                </span>
+                <span className="text-xl font-extrabold font-outfit text-brand-charcoal dark:text-dark-text block">
+                  {m.val || interview.score}%
+                </span>
+                <div className="w-full bg-brand-border/60 dark:bg-dark-border/60 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="bg-gradient-to-r from-brand-purple to-brand-blue h-full rounded-full"
+                    style={{ width: `${m.val || interview.score}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Question Responses Breakdown list */}
       <div className="space-y-4">
         <h3 className="font-outfit font-extrabold text-xl text-brand-charcoal dark:text-dark-text">
@@ -247,6 +297,8 @@ const InterviewFeedback = () => {
         <div className="space-y-4">
           {responses.map((resItem, idx) => {
             const isExpanded = expandedResponse === idx;
+            const isCoding = resItem.responseType === 'coding' || Boolean(resItem.code);
+
             return (
               <div
                 key={resItem._id}
@@ -262,9 +314,16 @@ const InterviewFeedback = () => {
                       {idx + 1}
                     </span>
                     <div>
-                      <h4 className="font-bold text-brand-charcoal dark:text-dark-text text-sm leading-snug truncate max-w-xl">
-                        {resItem.question}
-                      </h4>
+                      <div className="flex items-center gap-2">
+                        {resItem.category && (
+                          <span className="px-2 py-0.5 rounded bg-brand-purple/10 text-brand-purple dark:text-dark-purple text-[10px] font-bold uppercase">
+                            {resItem.category}
+                          </span>
+                        )}
+                        <h4 className="font-bold text-brand-charcoal dark:text-dark-text text-sm leading-snug truncate max-w-xl">
+                          {resItem.question}
+                        </h4>
+                      </div>
                       <p className="text-xs text-brand-slate dark:text-dark-muted mt-0.5">Score: {resItem.evaluation?.score}%</p>
                     </div>
                   </div>
@@ -284,13 +343,49 @@ const InterviewFeedback = () => {
                 {isExpanded && (
                   <div className="p-6 pt-0 border-t border-brand-border dark:border-dark-border bg-brand-surface/20 dark:bg-dark-surface/30 space-y-6 text-sm">
                     
-                    {/* Transcript block */}
-                    <div className="space-y-2">
-                      <h5 className="font-bold text-brand-charcoal dark:text-dark-text text-xs uppercase tracking-wide">Your Answer Transcript</h5>
-                      <div className="p-4 rounded-2xl bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border text-xs leading-relaxed text-brand-slate dark:text-dark-muted italic">
-                        "{resItem.answer || 'No transcript generated. Text workspace left empty.'}"
+                    {/* Transcript or Code Submission block */}
+                    {isCoding ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h5 className="font-bold text-brand-charcoal dark:text-dark-text text-xs uppercase tracking-wide">
+                            Candidate Code Solution ({resItem.language || 'JavaScript'})
+                          </h5>
+                        </div>
+                        <pre className="p-4 rounded-2xl bg-slate-900 text-slate-100 text-xs font-mono overflow-x-auto leading-relaxed border border-slate-800">
+                          {resItem.code || resItem.answer || '// No code submitted'}
+                        </pre>
+
+                        {/* Test Case Results */}
+                        {resItem.testCaseResults?.length > 0 && (
+                          <div className="space-y-1.5">
+                            <h6 className="text-[11px] font-bold text-brand-slate dark:text-dark-muted uppercase">
+                              Test Cases Validated (Visible & Hidden Edge Cases):
+                            </h6>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {resItem.testCaseResults.map((tc, tci) => (
+                                <div key={tci} className="p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border text-xs flex items-center justify-between">
+                                  <span className="font-mono text-brand-charcoal dark:text-dark-text flex items-center gap-1.5">
+                                    <span>{tc.name || (tc.isHidden ? `Hidden Case ${tci + 1}` : `Case ${tc.testCase || tci + 1}`)}</span>
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    tc.passed ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400'
+                                  }`}>
+                                    {tc.passed ? 'PASSED' : 'FAILED'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <h5 className="font-bold text-brand-charcoal dark:text-dark-text text-xs uppercase tracking-wide">Your Answer Transcript</h5>
+                        <div className="p-4 rounded-2xl bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border text-xs leading-relaxed text-brand-slate dark:text-dark-muted italic">
+                          "{resItem.answer || 'No transcript generated. Text workspace left empty.'}"
+                        </div>
+                      </div>
+                    )}
 
                     {/* Breakdown Scores Panel */}
                     <div className="space-y-3">

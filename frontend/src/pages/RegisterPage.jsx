@@ -15,21 +15,6 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const enterFullscreen = () => {
-    const docEl = document.documentElement;
-    const requestMethod =
-      docEl.requestFullscreen ||
-      docEl.webkitRequestFullscreen ||
-      docEl.mozRequestFullScreen ||
-      docEl.msRequestFullscreen;
-
-    if (requestMethod) {
-      requestMethod.call(docEl).catch((err) => {
-        console.error('Error enabling fullscreen mode:', err);
-      });
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -48,9 +33,6 @@ const RegisterPage = () => {
       return;
     }
 
-    // Request fullscreen on signup click gesture
-    enterFullscreen();
-
     setLoading(true);
     const res = await register(name, email, password, confirmPassword);
     setLoading(false);
@@ -58,19 +40,6 @@ const RegisterPage = () => {
     if (res?.success) {
       navigate('/dashboard');
     } else {
-      // Exit fullscreen if registration failed
-      if (document.fullscreenElement) {
-        const exitMethod =
-          document.exitFullscreen ||
-          document.webkitExitFullscreen ||
-          document.mozCancelFullScreen ||
-          document.msExitFullscreen;
-        if (exitMethod) {
-          exitMethod.call(document).catch((err) => {
-            console.error('Error exiting fullscreen on failed registration:', err);
-          });
-        }
-      }
       setToast({ message: res?.message || 'Registration failed', type: 'error' });
     }
   };

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Cpu, ShieldCheck, BarChart3, Mic, Zap, Users, MessageSquare, ArrowRight, CheckCircle2, ChevronDown, Award } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { Cpu, ShieldCheck, BarChart3, Mic, Zap, Users, MessageSquare, ArrowRight, CheckCircle2, ChevronDown, Award, Sparkles, ExternalLink, RefreshCw } from 'lucide-react';
 
 const LandingPage = () => {
   const { user } = useAuth();
+  const { isVersion2, switchVersion, appVersion } = useTheme();
   const [activeFaq, setActiveFaq] = useState(null);
 
   const toggleFaq = (index) => {
@@ -61,41 +63,114 @@ const LandingPage = () => {
       <div className="bg-ambient-glow glow-purple"></div>
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-20 sm:pt-32 sm:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+      <section className="relative pt-20 pb-20 sm:pt-28 sm:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
         
+        {/* Version 1 ONLY Announcement Banner (Hidden in Version 2) with Spin-Up & Float Animation */}
+        {!isVersion2 && (
+          <div className="max-w-3xl mx-auto mb-10 p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-brand-purple/20 via-brand-blue/15 to-emerald-500/20 border-2 border-brand-purple/50 dark:border-dark-purple/60 backdrop-blur-xl shadow-[0_10px_40px_rgba(124,58,237,0.25)] text-left sm:text-center animate-spin-up animate-float-subtle relative overflow-hidden group">
+            {/* Glowing Accent Ring */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700"></div>
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-purple/25 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700"></div>
+
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-brand-purple to-brand-blue text-white text-xs font-extrabold uppercase tracking-wider mb-3 shadow-md">
+              <Sparkles size={14} className="animate-spin-slow text-amber-300" />
+              <span>🚀 Version 2 is Ready!</span>
+            </div>
+            <h2 className="text-xl sm:text-3xl font-extrabold text-brand-charcoal dark:text-dark-text font-outfit tracking-tight">
+              Resume-Based AI Interview (Version 2)
+            </h2>
+            <p className="text-xs sm:text-sm text-brand-slate dark:text-dark-muted mt-2 max-w-xl mx-auto leading-relaxed">
+              Upload your resume and experience real-time project extraction, customized technical & SQL rounds, and our new emerald theme.
+            </p>
+            <div className="mt-5 flex items-center justify-start sm:justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => switchVersion('v2')}
+                className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 hover:from-emerald-300 hover:to-teal-300 text-slate-950 text-xs font-black shadow-[0_0_30px_rgba(0,245,160,0.6)] transition-all hover:scale-105 active:scale-95"
+              >
+                <span>Launch Version 2 (ResumeAI Theme)</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Top Badges */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-purple-light dark:bg-dark-purple/20 border border-brand-purple/10 dark:border-dark-purple/30 text-brand-purple dark:text-dark-purple text-xs font-bold uppercase tracking-wider mb-8 animate-pulse">
-          <Award size={14} />
-          <span>AI-Powered Interview Prep</span>
-        </div>
+        {isVersion2 ? (
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-500/40 text-[#00F5A0] text-xs font-bold tracking-wide mb-8 shadow-[0_0_20px_rgba(0,245,160,0.25)] animate-pulse">
+            <Sparkles size={14} className="text-[#00F5A0]" />
+            <span>AI-Driven ATS Parsing & Mock Interview Intelligence</span>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-brand-purple-light dark:bg-dark-purple/20 border border-brand-purple/10 dark:border-dark-purple/30 text-brand-purple dark:text-dark-purple text-xs font-bold uppercase tracking-wider mb-8 animate-pulse">
+            <Award size={14} />
+            <span>AI-Powered Interview Prep</span>
+          </div>
+        )}
 
         {/* Heading */}
-        <h1 className="font-outfit font-extrabold text-3xl sm:text-5xl tracking-tight text-brand-charcoal dark:text-dark-text leading-[1.1] mb-6">
-          Practice Smarter. <br className="hidden sm:block" />
-          Speak Confidently. <span className="bg-gradient-to-r from-brand-purple via-brand-blue to-brand-cyan bg-clip-text text-transparent">Succeed in Every Interview.</span>
-        </h1>
+        {isVersion2 ? (
+          <h1 className="font-outfit font-extrabold text-3xl sm:text-6xl tracking-tight text-white leading-[1.15] mb-6">
+            Scale Career Readiness with <br className="hidden sm:block" />
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+              Production–Grade Precision
+            </span>
+          </h1>
+        ) : (
+          <h1 className="font-outfit font-extrabold text-3xl sm:text-5xl tracking-tight text-brand-charcoal dark:text-dark-text leading-[1.1] mb-6">
+            Practice Smarter. <br className="hidden sm:block" />
+            Speak Confidently. <span className="bg-gradient-to-r from-brand-purple via-brand-blue to-brand-cyan bg-clip-text text-transparent">Succeed in Every Interview.</span>
+          </h1>
+        )}
 
-        {/* Subtitle */}
-        <p className="max-w-2xl mx-auto text-base sm:text-xl text-brand-slate dark:text-dark-muted leading-relaxed mb-10">
-          Practice real interview questions, get AI-generated feedback, and track your performance—all in one platform.
-        </p>
+        {/* Subtitle with Emerald Highlight Spans */}
+        {isVersion2 ? (
+          <p className="max-w-3xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed mb-10">
+            Audit resumes against target job specifications with <span className="text-[#00F5A0] font-bold">PyMuPDF parsing</span>, <span className="text-cyan-400 font-bold">FAISS semantic embeddings</span>, and seamlessly practice in the <span className="text-[#00F5A0] font-bold">MockWithSiva</span> virtual interviewer platform.
+          </p>
+        ) : (
+          <p className="max-w-2xl mx-auto text-base sm:text-xl text-brand-slate dark:text-dark-muted leading-relaxed mb-10">
+            Practice real interview questions, get AI-generated feedback, and track your performance—all in one platform.
+          </p>
+        )}
 
         {/* Call to Actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            to={user ? "/interview/setup" : "/register"}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-brand-purple dark:bg-dark-purple hover:bg-brand-purpleHover dark:hover:bg-dark-purpleHover text-white font-semibold text-lg shadow-purple-glow dark:shadow-neon-purple transition-all duration-300 hover:translate-y-[-2px] active:translate-y-0"
-          >
-            <span>Take Mock Interview</span>
-            <ArrowRight size={20} />
-          </Link>
-          <Link
-            to={user ? "/practice" : "/login"}
-            className="w-full sm:w-auto flex items-center justify-center px-8 py-4 rounded-2xl border border-brand-border dark:border-dark-border hover:border-brand-purple dark:hover:border-dark-purple text-brand-charcoal dark:text-dark-text hover:bg-brand-surface dark:hover:bg-dark-card font-semibold text-lg transition-colors"
-          >
-            Start Practice
-          </Link>
-        </div>
+        {isVersion2 ? (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href="https://resume-analyzer-eight-sigma.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-[#00F5A0] hover:bg-emerald-400 text-slate-950 font-extrabold text-base shadow-[0_0_30px_rgba(0,245,160,0.5)] transition-all hover:scale-105 active:scale-95"
+            >
+              <span>Analyze Resume Now</span>
+              <ArrowRight size={18} />
+            </a>
+            <Link
+              to={user ? "/interview/setup" : "/register"}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-full border border-slate-700 hover:border-emerald-500/80 bg-slate-900/80 hover:bg-slate-800 text-slate-100 font-semibold text-base transition-all"
+            >
+              <span>Launch Mock Interview</span>
+              <ExternalLink size={16} />
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to={user ? "/interview/setup" : "/register"}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-brand-purple dark:bg-dark-purple hover:bg-brand-purpleHover dark:hover:bg-dark-purpleHover text-white font-semibold text-lg shadow-purple-glow dark:shadow-neon-purple transition-all duration-300 hover:translate-y-[-2px] active:translate-y-0"
+            >
+              <span>Take Mock Interview</span>
+              <ArrowRight size={20} />
+            </Link>
+            <Link
+              to={user ? "/practice" : "/login"}
+              className="w-full sm:w-auto flex items-center justify-center px-8 py-4 rounded-2xl border border-brand-border dark:border-dark-border hover:border-brand-purple dark:hover:border-dark-purple text-brand-charcoal dark:text-dark-text hover:bg-brand-surface dark:hover:bg-dark-card font-semibold text-lg transition-colors"
+            >
+              Start Practice
+            </Link>
+          </div>
+        )}
 
         {/* Mockup Showcase Panel */}
         <div className="mt-16 sm:mt-20 max-w-5xl mx-auto rounded-3xl border border-brand-border dark:border-dark-border bg-brand-surface/50 dark:bg-dark-card/50 p-3 sm:p-4 shadow-premium dark:shadow-dark-card glass-panel">
