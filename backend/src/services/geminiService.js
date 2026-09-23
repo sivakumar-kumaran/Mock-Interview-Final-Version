@@ -1,11 +1,12 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Initialize Gemini client (fallback handled gracefully if key is missing)
-const apiKey = process.env.GEMINI_API_KEY;
-let genAI = null;
-if (apiKey && apiKey !== 'your_gemini_api_key_here') {
-  genAI = new GoogleGenerativeAI(apiKey);
-}
+const getGenAI = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey && apiKey !== 'your_gemini_api_key_here') {
+    return new GoogleGenerativeAI(apiKey);
+  }
+  return null;
+};
 
 /**
  * Evaluates an individual response to a question
@@ -24,13 +25,14 @@ const evaluateResponse = async (question, answer, difficulty) => {
     };
   }
 
+  const genAI = getGenAI();
   if (!genAI) {
     console.log('Gemini API key not configured or invalid. Using simulated evaluation.');
     return getMockIndividualEvaluation(question, answer, difficulty);
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const prompt = `You are an expert technical and HR interviewer.
 Evaluate the candidate's answer for the following question:
 Question: "${question}"
@@ -68,17 +70,15 @@ The output JSON structure MUST be:
   }
 };
 
-/**
- * Generates overall feedback summary for the entire interview
- */
 const evaluateOverallInterview = async (responsesList) => {
+  const genAI = getGenAI();
   if (!genAI) {
     console.log('Gemini API key not configured or invalid. Using simulated overall evaluation.');
     return getMockOverallEvaluation(responsesList);
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const responsesSummary = responsesList.map((r, i) => {
       return `Q${i+1}: ${r.question}\nAnswer: ${r.answer}\nScore: ${r.evaluation.score}/100\nFeedback: ${r.evaluation.feedback}`;
     }).join('\n\n');
@@ -194,13 +194,14 @@ function getMockOverallEvaluation(responsesList) {
 }
 
 const chatWithAI = async (message, history = []) => {
+  const genAI = getGenAI();
   if (!genAI) {
     console.log('Gemini API key not configured. Using simulated chatbot responses.');
     return "Hi! I am your AI Interview Coach. It looks like the Gemini API Key is not configured in the backend environment, but I am still here to help! Feel free to ask me any general questions about technical concepts, resume building, or interview strategy.";
   }
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.5-flash-lite',
       systemInstruction: "You are Antigravity AI Coach, a supportive, expert career coach and technical/HR interviewer. Help candidates prepare for interviews, explain programming concepts, structure their responses (using STAR method), and keep your answers brief, encouraging, and clear."
     });
     const chat = model.startChat({
@@ -246,48 +247,81 @@ const getMockChatResponse = (message) => {
 };
 
 /**
- * Generates dynamic, multi-stage interview questions tailored strictly to the user's uploaded resume
+ * Generates dynamic, multi-stage interview questions tailored strictly to the user's uploaded resume summarization
  */
 const generateResumeInterviewQuestions = async (profile, difficulty = 'Intermediate') => {
+  const summaryReport = profile.summaryReport || {};
+  const projects = summaryReport.projects || profile.projects || [];
+  const training = summaryReport.experienceAndTraining || profile.experience || [];
+  const likelyQ = summaryReport.likelyInterviewQuestions || profile.likelyInterviewQuestions || [];
+  const techSkills = (summaryReport.technicalSkills?.languages || profile.skills?.technical || ['Java', 'JavaScript', 'Python']).join(', ');
+  const frameworks = (summaryReport.technicalSkills?.backend || profile.skills?.frameworks || ['React', 'Node.js', 'FastAPI']).join(', ');
+  const databases = (summaryReport.technicalSkills?.databases || profile.skills?.databases || ['MySQL', 'MongoDB']).join(', ');
+  const primarySkill = (summaryReport.technicalSkills?.languages?.[0] || profile.skills?.technical?.[0] || 'Java').toLowerCase();
+  const codingLang = primarySkill.includes('python') ? 'python' : (primarySkill.includes('java') ? 'java' : 'javascript');
+
+  const projectsContext = projects.map((p, i) => {
+    const title = p.title || p.name || `Project ${i+1}`;
+    const desc = p.description || p.summary || '';
+    const stack = (p.techStack || p.technologies || []).join(', ');
+    const concepts = (p.advancedConcepts || p.highlights || []).join(', ');
+    return `Project ${i+1}: "${title}" | Stack: [${stack}] | Concepts: [${concepts}] | Overview: ${desc}`;
+  }).join('\n');
+
+  const trainingContext = training.map((t, i) => {
+    const title = t.title || t.role || `Experience ${i+1}`;
+    const org = t.organization || t.company || '';
+    const learned = (t.conceptsLearned || t.details || []).join(', ');
+    return `Training/Exp ${i+1}: "${title}" at "${org}" | Learned: [${learned}]`;
+  }).join('\n');
+
+  const likelyQuestionsContext = likelyQ.map(lq => {
+    return `${lq.category || 'Topic'}:\n` + (lq.questions || []).map(q => `- ${q}`).join('\n');
+  }).join('\n\n');
+
+  const genAI = getGenAI();
   if (!genAI) {
     return getMockResumeQuestions(profile, difficulty);
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    
-    // Extract real candidate entities
-    const techSkills = (profile.skills?.technical || []).join(', ') || 'Java, JavaScript, Python';
-    const frameworks = (profile.skills?.frameworks || []).join(', ') || 'React, Node.js, Express';
-    const databases = (profile.skills?.databases || []).join(', ') || 'SQL, MongoDB';
-    const primaryProject = profile.projects?.[0] || { name: 'Full Stack Web App', summary: 'Scalable web application' };
-    const primarySkill = (profile.skills?.technical?.[0] || 'Java').toLowerCase();
-    const codingLang = primarySkill.includes('python') ? 'python' : (primarySkill.includes('java') ? 'java' : 'javascript');
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
 
-    const prompt = `You are a Senior Technical Hiring Manager conducting a 30-35 minute realistic technical interview for a candidate applying for "${profile.targetRole || 'Full Stack Developer'}".
+    const prompt = `You are an expert Technical Hiring Manager and Bar Raiser conducting a dynamic 30-35 minute interview tailored strictly to the candidate's resume analysis.
 
-Candidate's Real Resume Details:
+Candidate Summary:
 - Target Role: ${profile.targetRole || 'Full Stack Developer'}
+- Professional Pitch: ${summaryReport.professionalSummary || profile.summary || ''}
 - Core Skills: ${techSkills}
-- Frameworks/Tools: ${frameworks}
+- Backend/Frameworks: ${frameworks}
 - Databases: ${databases}
-- Project: ${primaryProject.name} (${primaryProject.summary || ''})
-- Coding Language Preference: ${codingLang}
-- Difficulty: ${difficulty}
+- Candidate Projects:
+${projectsContext || 'Full Stack Application'}
+- Industrial Training / Experience:
+${trainingContext || 'Document Processing and Search Systems'}
 
-Generate exactly 6 simple, high-impact, direct interview questions strictly based on the candidate's resume:
-1. Stage 1 (Category: "intro", Type: "verbal", Time: 4 mins): Brief introduction focusing on their role and architecture in "${primaryProject.name}".
-2. Stage 2 (Category: "technical", Type: "verbal", Time: 4 mins): Simple, important conceptual question on their core skill (${techSkills.split(',')[0]}).
-3. Stage 3 (Category: "sql", Type: "coding", Language: "sql", Time: 10 mins): COMPULSORY SQL Query Challenge. Real-world scenario (e.g. Employee Department Salaries, Duplicate records, or Order aggregation). Include table schema, starter SQL boilerplate, 1 visible test case, and 1 hidden test case.
-4. Stage 4 (Category: "coding", Type: "coding", Language: "${codingLang}", Time: 15 mins): Practical Algorithmic / Coding Challenge matching ${codingLang}. Include function starter code, 2 visible test cases with inputs & outputs, and 2 hidden edge test cases with "isHidden": true.
-5. Stage 5 (Category: "architecture", Type: "verbal", Time: 4 mins): Simple, direct question on backend APIs, database indexing, or error handling from their project stack (${databases}, ${frameworks}).
-6. Stage 6 (Category: "behavioral", Type: "verbal", Time: 3 mins): Direct situational / problem-solving question for a ${profile.targetRole || 'Developer'}.
+High-Yield Question Suggestions from Resume:
+${likelyQuestionsContext}
 
-IMPORTANT CODING / TEST CASE RULES:
-- Every testCase must have: "id" (int), "isHidden" (boolean), "input" (string), "expected" (string), "name" (string e.g. "Test Case 1", "Hidden Edge Case 1").
-- Keep question text concise, clear, and realistic.
+Candidate's Preferred Coding Language: ${codingLang}
+Interview Difficulty: ${difficulty}
 
-Output ONLY valid raw JSON without markdown markers:
+CRITICAL RULES:
+- DO NOT ASK GENERIC OR FIXED QUESTIONS.
+- Ask questions directly challenging the specific claims, architectural decisions, and concepts on their resume (e.g. if they built an AI Mock Interview with RAG/embeddings/vector search, ask how RAG and embeddings work; if they used Dijkstra's Algorithm in a Disaster Rescue system, ask why Dijkstra and time complexity; if they built a Railway system in Java/SQL, ask about OOP design and SQL concurrency; if they did Intel Unnati training, ask about PDF extraction and semantic vs keyword search).
+
+Generate exactly 6 multi-stage interview questions:
+1. Stage 1 (Category: "intro", Type: "verbal", Time: 4 mins): Ask a tailored project architecture question on their primary project (${projects[0]?.title || projects[0]?.name || 'Primary Project'}).
+2. Stage 2 (Category: "technical", Type: "verbal", Time: 4 mins): Deep-dive question on the core concepts in their resume (e.g. RAG, Dijkstra algorithm, OOP principles, or semantic search).
+3. Stage 3 (Category: "sql", Type: "coding", Language: "sql", Time: 10 mins): Compulsory SQL challenge relevant to their stated database stack (${databases}). Include schema, prompt, starter code, 1 visible test case, and 1 hidden test case.
+4. Stage 4 (Category: "coding", Type: "coding", Language: "${codingLang}", Time: 15 mins): Algorithmic coding challenge in ${codingLang}. Include function starter code, 2 visible test cases, and 2 hidden edge test cases with "isHidden": true.
+5. Stage 5 (Category: "architecture", Type: "verbal", Time: 4 mins): System design / data flow question based on their industrial training / secondary project.
+6. Stage 6 (Category: "behavioral", Type: "verbal", Time: 3 mins): Situational engineering question on teamwork, debugging, or project leadership.
+
+IMPORTANT:
+- Every testCase in Stage 3 and Stage 4 must have: "id" (int), "name" (string), "isHidden" (boolean), "input" (string), "expected" (string).
+
+Output ONLY valid raw JSON without markdown formatting:
 {
   "questions": [
     {
@@ -295,16 +329,16 @@ Output ONLY valid raw JSON without markdown markers:
       "category": "intro",
       "type": "verbal",
       "allocatedMinutes": 4,
-      "question": "<short question text>",
-      "context": "Resume Overview"
+      "question": "<direct question>",
+      "context": "Project Architecture"
     },
     {
       "id": 2,
       "category": "technical",
       "type": "verbal",
       "allocatedMinutes": 4,
-      "question": "<short question text>",
-      "context": "Core Skill Deep Dive"
+      "question": "<direct question on RAG, Dijkstra, OOP, or Search concepts>",
+      "context": "Core Technical Depth"
     },
     {
       "id": 3,
@@ -312,11 +346,11 @@ Output ONLY valid raw JSON without markdown markers:
       "type": "coding",
       "language": "sql",
       "allocatedMinutes": 10,
-      "question": "<clear SQL problem with table schema and goal>",
+      "question": "<SQL Problem statement with table schemas>",
       "starterCode": "-- Write your SQL query here\\nSELECT \\n    \\nFROM ;",
       "testCases": [
-        { "id": 1, "isHidden": false, "name": "Visible Case 1", "input": "Employees table with 5 rows", "expected": "DeptName, MaxSalary" },
-        { "id": 2, "isHidden": true, "name": "Hidden Edge Case (Nulls / Ties)", "input": "Employees with tie salaries and NULL departments", "expected": "Correct distinct group" }
+        { "id": 1, "isHidden": false, "name": "Visible Case 1", "input": "Sample Table with 5 rows", "expected": "Expected Query Result" },
+        { "id": 2, "isHidden": true, "name": "Hidden Edge Case (NULLs/Duplicates)", "input": "Edge records with NULLs", "expected": "Correct distinct output" }
       ]
     },
     {
@@ -325,13 +359,13 @@ Output ONLY valid raw JSON without markdown markers:
       "type": "coding",
       "language": "${codingLang}",
       "allocatedMinutes": 15,
-      "question": "<practical algorithmic problem statement with constraints>",
-      "starterCode": "<valid function boilerplate in ${codingLang}>",
+      "question": "<Algorithmic Problem statement with constraints>",
+      "starterCode": "<Starter boilerplate in ${codingLang}>",
       "testCases": [
-        { "id": 1, "isHidden": false, "name": "Test Case 1", "input": "<sample input 1>", "expected": "<expected output 1>" },
-        { "id": 2, "isHidden": false, "name": "Test Case 2", "input": "<sample input 2>", "expected": "<expected output 2>" },
-        { "id": 3, "isHidden": true, "name": "Hidden Case 1 (Boundary)", "input": "<edge input 3>", "expected": "<edge output 3>" },
-        { "id": 4, "isHidden": true, "name": "Hidden Case 2 (Duplicates/Empty)", "input": "<edge input 4>", "expected": "<edge output 4>" }
+        { "id": 1, "isHidden": false, "name": "Test Case 1", "input": "<input 1>", "expected": "<output 1>" },
+        { "id": 2, "isHidden": false, "name": "Test Case 2", "input": "<input 2>", "expected": "<output 2>" },
+        { "id": 3, "isHidden": true, "name": "Hidden Case 1 (Boundary)", "input": "<edge input 1>", "expected": "<edge output 1>" },
+        { "id": 4, "isHidden": true, "name": "Hidden Case 2 (Duplicates/Empty)", "input": "<edge input 2>", "expected": "<edge output 2>" }
       ]
     },
     {
@@ -339,7 +373,7 @@ Output ONLY valid raw JSON without markdown markers:
       "category": "architecture",
       "type": "verbal",
       "allocatedMinutes": 4,
-      "question": "<concise architecture question>",
+      "question": "<Architecture & system design question>",
       "context": "System & Data Flow"
     },
     {
@@ -347,8 +381,8 @@ Output ONLY valid raw JSON without markdown markers:
       "category": "behavioral",
       "type": "verbal",
       "allocatedMinutes": 3,
-      "question": "<concise behavioral question>",
-      "context": "HR & Team Alignment"
+      "question": "<Behavioral & problem solving question>",
+      "context": "Engineering Practices"
     }
   ]
 }`;
@@ -362,7 +396,10 @@ Output ONLY valid raw JSON without markdown markers:
     }
 
     const data = JSON.parse(text);
-    return data.questions || getMockResumeQuestions(profile, difficulty);
+    if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+      return data.questions;
+    }
+    return getMockResumeQuestions(profile, difficulty);
   } catch (err) {
     console.error('Error calling Gemini for resume questions:', err);
     return getMockResumeQuestions(profile, difficulty);
@@ -370,10 +407,13 @@ Output ONLY valid raw JSON without markdown markers:
 };
 
 /**
- * Fallback questions if Gemini API is offline
+ * Fallback questions if Gemini API is offline - dynamically tailored to resume content
  */
 function getMockResumeQuestions(profile, difficulty) {
-  const primaryProject = profile.projects?.[0]?.name || 'Web Application Platform';
+  const summary = profile.summaryReport || {};
+  const projects = summary.projects || profile.projects || [];
+  const p1 = projects[0]?.title || projects[0]?.name || 'AI-Powered Mock Interview Platform';
+  const p2 = projects[1]?.title || projects[1]?.name || 'Disaster Rescue Management System';
   const primarySkill = (profile.skills?.technical?.[0] || 'Java').toLowerCase();
   const codingLang = primarySkill.includes('python') ? 'python' : (primarySkill.includes('java') ? 'java' : 'javascript');
 
@@ -387,16 +427,16 @@ function getMockResumeQuestions(profile, difficulty) {
       category: 'intro',
       type: 'verbal',
       allocatedMinutes: 4,
-      question: `Welcome! Please walk me through your technical background and your specific architectural contributions in "${primaryProject}".`,
-      context: 'Resume Project Overview'
+      question: `Walk me through the architecture of "${p1}". How does vector search and RAG work under the hood, and how did you calculate the ATS resume score?`,
+      context: 'Resume Project Deep Dive'
     },
     {
       id: 2,
       category: 'technical',
       type: 'verbal',
       allocatedMinutes: 4,
-      question: `How do you handle error handling, memory management, and asynchronous operations when working with ${primarySkill.toUpperCase()}?`,
-      context: 'Core Technology Mastery'
+      question: `In your "${p2}" project, why did you select Dijkstra's Algorithm for volunteer routing? What is its time complexity and how did you handle real-time location updates?`,
+      context: 'Algorithm & Concept Verification'
     },
     {
       id: 3,
@@ -404,7 +444,7 @@ function getMockResumeQuestions(profile, difficulty) {
       type: 'coding',
       language: 'sql',
       allocatedMinutes: 10,
-      question: `Write an SQL query to find the 2nd Highest Salary from the Employees table (columns: id, name, department_id, salary). If there is no second highest salary, the query should return NULL.`,
+      question: `Write an SQL query to find the 2nd Highest Salary from the Employees table (columns: id, name, department_id, salary). If there is no second highest salary, return NULL.`,
       starterCode: `-- Compulsory SQL Challenge\nSELECT \n    MAX(salary) AS SecondHighestSalary\nFROM Employees\nWHERE salary < (SELECT MAX(salary) FROM Employees);`,
       testCases: [
         { id: 1, isHidden: false, name: "Visible Case 1", input: "Employees: [1: 100, 2: 200, 3: 300]", expected: "200" },
@@ -417,7 +457,7 @@ function getMockResumeQuestions(profile, difficulty) {
       type: 'coding',
       language: codingLang,
       allocatedMinutes: 15,
-      question: `Write an efficient function to find the Second Highest unique number in an unsorted integer array without using built-in sort functions. Optimal time complexity must be O(N).`,
+      question: `Write an optimal O(N) function to find the Second Highest unique number in an unsorted integer array without sorting. Return -1 if no such element exists.`,
       starterCode: codingLang === 'java' ? javaStarter : (codingLang === 'python' ? pyStarter : jsStarter),
       testCases: [
         { id: 1, isHidden: false, name: "Visible Case 1", input: "[10, 20, 4, 45, 99]", expected: "45" },
@@ -431,19 +471,20 @@ function getMockResumeQuestions(profile, difficulty) {
       category: 'architecture',
       type: 'verbal',
       allocatedMinutes: 4,
-      question: `In a production system with high concurrent traffic, how would you design database indexing, connection pooling, and caching to avoid bottlenecks?`,
-      context: 'System Architecture'
+      question: `During your Intel Unnati Industrial Training or document processing projects, what is the fundamental difference between keyword search and semantic vector search? How do you extract structured content from PDFs?`,
+      context: 'Document & Search Architecture'
     },
     {
       id: 6,
       category: 'behavioral',
       type: 'verbal',
       allocatedMinutes: 3,
-      question: `Describe a challenging technical bug or requirement disagreement you faced in a project. How did you resolve it under deadline pressure?`,
-      context: 'Teamwork & Problem Solving'
+      question: `As a team lead (e.g. in Smart India Hackathon), how did you handle critical technical bottlenecks or conflicting opinions under tight deadlines?`,
+      context: 'Leadership & Engineering Mindset'
     }
   ];
 }
+
 
 /**
  * Strict Code Evaluator
@@ -489,12 +530,13 @@ const evaluateCodeSubmission = async (question, code, language, testCases = []) 
     };
   }
 
+  const genAI = getGenAI();
   if (!genAI) {
     return getStrictMockCodeEvaluation(trimmed, language, testCases);
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const prompt = `You are a strict, production-grade Automated Code Evaluator and Judge for technical coding interviews.
 Evaluate the candidate's code submission against the problem statement and test cases.
 
@@ -638,12 +680,13 @@ function getStrictMockCodeEvaluation(code, language, testCases = []) {
  * Generates comprehensive 8-metric report for Resume-Based Interviews
  */
 const evaluateResumeInterviewOverall = async (responsesList, profile) => {
+  const genAI = getGenAI();
   if (!genAI) {
     return getMockResumeOverallEvaluation(responsesList, profile);
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const responsesSummary = responsesList.map((r, i) => {
       const type = (r.responseType === 'coding' || r.type === 'coding') ? `[Code Submission in ${r.language || 'Code'}]\n${r.code}` : `Answer:\n${r.answer}`;
       return `Q${i+1} (${r.category || 'tech'}): ${r.question}\n${type}\nScore: ${r.evaluation?.score || 0}/100\nFeedback: ${r.evaluation?.feedback || ''}`;

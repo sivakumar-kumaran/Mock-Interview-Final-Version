@@ -64,7 +64,7 @@ const startInterview = async (req, res) => {
       topic: topicObj.title,
       interviewType: 'topic',
       difficulty,
-      status: 'completed',
+      status: 'in-progress',
       violationsCount: 0,
       violations: []
     });
@@ -193,7 +193,24 @@ const submitInterview = async (req, res) => {
  */
 const getHistory = async (req, res) => {
   try {
-    const interviews = await Interview.find({ userId: req.user.id }).sort({ date: -1 });
+    const rawInterviews = await Interview.find({
+      userId: req.user.id,
+      $or: [
+        { status: { $in: ['completed', 'terminated'] } },
+        { score: { $gt: 0 } }
+      ]
+    }).sort({ date: -1 });
+
+    // Deduplicate by ID and ensure valid unique completed sessions
+    const seenIds = new Set();
+    const interviews = [];
+    for (const item of rawInterviews) {
+      const idStr = item._id.toString();
+      if (!seenIds.has(idStr)) {
+        seenIds.add(idStr);
+        interviews.push(item);
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -394,7 +411,7 @@ const startResumeInterview = async (req, res) => {
       resumeProfileId: profile._id,
       targetRole: profile.targetRole || 'Full Stack Developer',
       difficulty,
-      status: 'completed',
+      status: 'in-progress',
       violationsCount: 0,
       violations: []
     });

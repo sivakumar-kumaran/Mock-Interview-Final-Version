@@ -75,6 +75,70 @@ const resumeProfileSchema = new mongoose.Schema({
     }
   ],
   certifications: [{ type: String }],
+  achievements: [{ type: String }],
+  areasOfInterest: [{ type: String }],
+  likelyInterviewQuestions: [
+    {
+      category: { type: String, default: '' },
+      questions: [{ type: String }]
+    }
+  ],
+  summaryReport: {
+    professionalSummary: { type: String, default: '' },
+    technicalSkills: {
+      languages: [{ type: String }],
+      coreCS: [{ type: String }],
+      backend: [{ type: String }],
+      frontend: [{ type: String }],
+      databases: [{ type: String }],
+      aiMl: [{ type: String }],
+      tools: [{ type: String }]
+    },
+    projects: [
+      {
+        title: { type: String, default: '' },
+        description: { type: String, default: '' },
+        techStack: [{ type: String }],
+        features: [{ type: String }],
+        advancedConcepts: [{ type: String }],
+        interviewOneLiner: { type: String, default: '' }
+      }
+    ],
+    experienceAndTraining: [
+      {
+        title: { type: String, default: '' },
+        organization: { type: String, default: '' },
+        details: [{ type: String }],
+        conceptsLearned: [{ type: String }],
+        interviewOneLiner: { type: String, default: '' }
+      }
+    ],
+    certifications: [{ type: String }],
+    achievements: [{ type: String }],
+    education: [
+      {
+        degree: { type: String, default: '' },
+        institution: { type: String, default: '' },
+        year: { type: String, default: '' },
+        score: { type: String, default: '' }
+      }
+    ],
+    areasOfInterest: [{ type: String }],
+    likelyInterviewQuestions: [
+      {
+        category: { type: String, default: '' },
+        questions: [{ type: String }]
+      }
+    ],
+    generatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  rawText: {
+    type: String,
+    default: ''
+  },
   currentVersion: {
     type: Number,
     default: 1
@@ -82,3 +146,5 @@ const resumeProfileSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('ResumeProfile', resumeProfileSchema);
+
+

@@ -2,8 +2,10 @@ const express = require('express');
 const multer = require('multer');
 const {
   uploadResume,
+  pasteResumeText,
   uploadPhoto,
   getProfile,
+  reanalyzeProfile,
   updateProfile,
   deleteProfile
 } = require('../controllers/resumeController');
@@ -20,9 +22,12 @@ const upload = multer({
 
 // Resume routes
 router.post('/upload', protect, upload.single('resume'), uploadResume);
+router.post('/paste-text', protect, pasteResumeText);
+router.post('/re-analyze', protect, reanalyzeProfile);
 router.post('/photo', protect, upload.single('photo'), uploadPhoto);
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
 router.delete('/profile', protect, deleteProfile);
+
 
 module.exports = router;
