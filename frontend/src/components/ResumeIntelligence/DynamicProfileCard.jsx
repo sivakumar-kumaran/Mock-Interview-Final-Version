@@ -226,6 +226,13 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
   const educationList = summaryReport.education || profile.education || [];
   const areasOfInterest = summaryReport.areasOfInterest || profile.areasOfInterest || [];
 
+  const hasEducation = educationList.length > 0;
+  const hasAchievements = achievements.length > 0;
+  const hasCertifications = certifications.length > 0;
+  const hasAreasOfInterest = areasOfInterest.length > 0;
+  const hasAdditionalSection = hasEducation || hasAchievements || hasCertifications || hasAreasOfInterest;
+  const profSummaryText = summaryReport.professionalSummary || profile.summary;
+
   const currentAvatar = avatarPreview || user?.avatarUrl;
 
   return (
@@ -328,68 +335,72 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                 </span>
               </div>
               
-              <p className="text-xs text-brand-slate dark:text-dark-muted">
-                {displayEmail} {displayPhone ? `• ${displayPhone}` : ''}
-              </p>
+              {(displayEmail || displayPhone) && (
+                <p className="text-xs text-brand-slate dark:text-dark-muted">
+                  {[displayEmail, displayPhone].filter(Boolean).join(' • ')}
+                </p>
+              )}
 
               {/* User Links / Hyperlinks Bar */}
-              <div className="flex flex-wrap items-center gap-2 pt-1.5">
-                {githubLink && (
-                  <a
-                    href={githubLink.startsWith('http') ? githubLink : `https://${githubLink}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium transition-colors border border-slate-300 dark:border-slate-700"
-                    title="Visit GitHub Profile"
-                  >
-                    <Github size={12} />
-                    <span>GitHub</span>
-                    <ExternalLink size={10} className="opacity-60" />
-                  </a>
-                )}
+              {(githubLink || linkedinLink || portfolioLink || leetcodeLink) && (
+                <div className="flex flex-wrap items-center gap-2 pt-1.5">
+                  {githubLink && (
+                    <a
+                      href={githubLink.startsWith('http') ? githubLink : `https://${githubLink}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium transition-colors border border-slate-300 dark:border-slate-700"
+                      title="Visit GitHub Profile"
+                    >
+                      <Github size={12} />
+                      <span>GitHub</span>
+                      <ExternalLink size={10} className="opacity-60" />
+                    </a>
+                  )}
 
-                {linkedinLink && (
-                  <a
-                    href={linkedinLink.startsWith('http') ? linkedinLink : `https://${linkedinLink}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-300 text-xs font-medium transition-colors border border-blue-200 dark:border-blue-800"
-                    title="Visit LinkedIn Profile"
-                  >
-                    <Linkedin size={12} />
-                    <span>LinkedIn</span>
-                    <ExternalLink size={10} className="opacity-60" />
-                  </a>
-                )}
+                  {linkedinLink && (
+                    <a
+                      href={linkedinLink.startsWith('http') ? linkedinLink : `https://${linkedinLink}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-300 text-xs font-medium transition-colors border border-blue-200 dark:border-blue-800"
+                      title="Visit LinkedIn Profile"
+                    >
+                      <Linkedin size={12} />
+                      <span>LinkedIn</span>
+                      <ExternalLink size={10} className="opacity-60" />
+                    </a>
+                  )}
 
-                {portfolioLink && (
-                  <a
-                    href={portfolioLink.startsWith('http') ? portfolioLink : `https://${portfolioLink}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-300 text-xs font-medium transition-colors border border-emerald-200 dark:border-emerald-800"
-                    title="Visit Portfolio Website"
-                  >
-                    <Globe size={12} />
-                    <span>Portfolio</span>
-                    <ExternalLink size={10} className="opacity-60" />
-                  </a>
-                )}
+                  {portfolioLink && (
+                    <a
+                      href={portfolioLink.startsWith('http') ? portfolioLink : `https://${portfolioLink}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-300 text-xs font-medium transition-colors border border-emerald-200 dark:border-emerald-800"
+                      title="Visit Portfolio Website"
+                    >
+                      <Globe size={12} />
+                      <span>Portfolio</span>
+                      <ExternalLink size={10} className="opacity-60" />
+                    </a>
+                  )}
 
-                {leetcodeLink && (
-                  <a
-                    href={leetcodeLink.startsWith('http') ? leetcodeLink : `https://${leetcodeLink}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-600 dark:text-amber-300 text-xs font-medium transition-colors border border-amber-200 dark:border-amber-800"
-                    title="Visit LeetCode Profile"
-                  >
-                    <Terminal size={12} />
-                    <span>LeetCode</span>
-                    <ExternalLink size={10} className="opacity-60" />
-                  </a>
-                )}
-              </div>
+                  {leetcodeLink && (
+                    <a
+                      href={leetcodeLink.startsWith('http') ? leetcodeLink : `https://${leetcodeLink}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-600 dark:text-amber-300 text-xs font-medium transition-colors border border-amber-200 dark:border-amber-800"
+                      title="Visit LeetCode Profile"
+                    >
+                      <Terminal size={12} />
+                      <span>LeetCode</span>
+                      <ExternalLink size={10} className="opacity-60" />
+                    </a>
+                  )}
+                </div>
+              )}
 
             </div>
           </div>
@@ -433,226 +444,227 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
               <Trash2 size={13} />
             </button>
           </div>
-        </div>
-
-        {/* Extracted Skills Badges (Neat Grid) */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-bold text-brand-charcoal dark:text-dark-text font-outfit">
-              <Code size={18} className="text-brand-purple dark:text-dark-purple" />
-              <span>Extracted Technical Skills & Proficiencies ({totalSkillsCount})</span>
+        </div>        {/* Extracted Skills Badges (Neat Grid) */}
+        {categorizedSkills.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-brand-charcoal dark:text-dark-text font-outfit">
+                <Code size={18} className="text-brand-purple dark:text-dark-purple" />
+                <span>Extracted Technical Skills & Proficiencies ({totalSkillsCount})</span>
+              </div>
+              <span className="text-xs text-brand-slate dark:text-dark-muted font-medium">
+                Extracted from resume
+              </span>
             </div>
-            <span className="text-xs text-brand-slate dark:text-dark-muted font-medium">
-              Extracted from resume
-            </span>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {categorizedSkills.map((cat, idx) => (
-              <div
-                key={idx}
-                className="p-3.5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2 hover:border-brand-purple/40 transition-colors"
-              >
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <div className="flex items-center gap-1.5">
-                    <cat.icon size={13} className={cat.iconColor} />
-                    <span className="text-brand-charcoal dark:text-dark-text font-bold text-[11px] uppercase tracking-wider">
-                      {cat.name}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {categorizedSkills.map((cat, idx) => (
+                <div
+                  key={idx}
+                  className="p-3.5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2 hover:border-brand-purple/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <div className="flex items-center gap-1.5">
+                      <cat.icon size={13} className={cat.iconColor} />
+                      <span className="text-brand-charcoal dark:text-dark-text font-bold text-[11px] uppercase tracking-wider">
+                        {cat.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-border/40 dark:bg-dark-border/60 text-brand-slate dark:text-dark-muted">
+                      {cat.skills.length}
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-border/40 dark:bg-dark-border/60 text-brand-slate dark:text-dark-muted">
-                    {cat.skills.length}
-                  </span>
-                </div>
 
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {cat.skills.map((skill, sIdx) => (
-                    <span
-                      key={sIdx}
-                      className={`px-2 py-0.5 rounded-lg border text-xs font-medium transition-colors ${cat.badgeClass}`}
-                    >
-                      {skill}
-                    </span>
-                  ))}
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {cat.skills.map((skill, sIdx) => (
+                      <span
+                        key={sIdx}
+                        className={`px-2 py-0.5 rounded-lg border text-xs font-medium transition-colors ${cat.badgeClass}`}
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
-      {/* AI Resume Summarization & Analysis Report - Landing Page Style (One After Another) */}
+      {/* AI Resume Summarization & Analysis Report - Landing Page Style */}
       <div className="space-y-8">
 
         {/* Section 1: Professional Summary */}
-        <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border dark:border-dark-border pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-brand-purple/10 dark:bg-dark-purple/20 text-brand-purple dark:text-dark-purple flex items-center justify-center font-bold text-sm">
-                1
+        {profSummaryText && (
+          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border dark:border-dark-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-purple/10 dark:bg-dark-purple/20 text-brand-purple dark:text-dark-purple flex items-center justify-center font-bold text-sm">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
+                    <Sparkles size={18} className="text-brand-purple" />
+                    <span>Professional Summary</span>
+                  </h3>
+                  <p className="text-xs text-brand-slate dark:text-dark-muted">
+                    Key overview and career background extracted from your resume.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                  <Sparkles size={18} className="text-brand-purple" />
-                  <span>Professional Summary</span>
-                </h3>
-                <p className="text-xs text-brand-slate dark:text-dark-muted">
-                  Key overview and career background extracted from your resume.
-                </p>
-              </div>
+
+              <button
+                onClick={handleCopyPitch}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-brand-border dark:border-dark-border text-xs font-semibold text-brand-charcoal dark:text-dark-text hover:bg-brand-surface dark:hover:bg-dark-bg hover:border-brand-purple transition-all shadow-xs shrink-0 self-start sm:self-auto"
+              >
+                {copiedPitch ? (
+                  <>
+                    <CheckCheck size={14} className="text-emerald-500" />
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Copy Summary</span>
+                  </>
+                )}
+              </button>
             </div>
 
-            <button
-              onClick={handleCopyPitch}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-brand-border dark:border-dark-border text-xs font-semibold text-brand-charcoal dark:text-dark-text hover:bg-brand-surface dark:hover:bg-dark-bg hover:border-brand-purple transition-all shadow-xs shrink-0 self-start sm:self-auto"
-            >
-              {copiedPitch ? (
-                <>
-                  <CheckCheck size={14} className="text-emerald-500" />
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied to Clipboard!</span>
-                </>
-              ) : (
-                <>
-                  <Copy size={13} />
-                  <span>Copy Summary</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-brand-purple/5 via-brand-blue/5 to-brand-cyan/5 border border-brand-purple/20 dark:border-dark-purple/30">
-            <p className="text-sm sm:text-base text-brand-charcoal dark:text-dark-text leading-relaxed font-medium">
-              {summaryReport.professionalSummary || profile.summary
-                ? `"${summaryReport.professionalSummary || profile.summary}"`
-                : <span className="text-brand-slate dark:text-dark-muted italic">No professional summary generated yet. Click "Re-Analyze with AI" above to generate your personalized summary from your resume.</span>
-              }
-            </p>
-          </div>
-        </section>
+            <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-brand-purple/5 via-brand-blue/5 to-brand-cyan/5 border border-brand-purple/20 dark:border-dark-purple/30">
+              <p className="text-sm sm:text-base text-brand-charcoal dark:text-dark-text leading-relaxed font-medium">
+                "{profSummaryText}"
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Section 2: Projects & Architecture Breakdown */}
-        <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
-          <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-brand-blue/10 dark:bg-dark-blue/20 text-brand-blue dark:text-dark-blue flex items-center justify-center font-bold text-sm">
-                2
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                  <Layers size={18} className="text-brand-blue" />
-                  <span>Projects & Architecture Deep Dive ({projectsList.length})</span>
-                </h3>
-                <p className="text-xs text-brand-slate dark:text-dark-muted">
-                  Technical architecture, features, and key algorithms implemented in your projects
-                </p>
+        {projectsList.length > 0 && (
+          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-blue/10 dark:bg-dark-blue/20 text-brand-blue dark:text-dark-blue flex items-center justify-center font-bold text-sm">
+                  <Layers size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
+                    <Layers size={18} className="text-brand-blue" />
+                    <span>Projects & Architecture Deep Dive ({projectsList.length})</span>
+                  </h3>
+                  <p className="text-xs text-brand-slate dark:text-dark-muted">
+                    Technical architecture, features, and key algorithms implemented in your projects
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
-            {projectsList.map((proj, idx) => (
-              <div
-                key={idx}
-                className="p-5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-3 hover:border-brand-blue/40 transition-colors flex flex-col justify-between"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] font-bold text-brand-purple uppercase tracking-wider">Project {idx + 1}</span>
-                      <h4 className="text-sm sm:text-base font-bold text-brand-charcoal dark:text-dark-text leading-snug">
-                        {proj.title || proj.name}
-                      </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+              {projectsList.map((proj, idx) => (
+                <div
+                  key={idx}
+                  className="p-5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-3 hover:border-brand-blue/40 transition-colors flex flex-col justify-between"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-bold text-brand-purple uppercase tracking-wider">Project {idx + 1}</span>
+                        <h4 className="text-sm sm:text-base font-bold text-brand-charcoal dark:text-dark-text leading-snug">
+                          {proj.title || proj.name}
+                        </h4>
+                      </div>
                     </div>
+
+                    {proj.description && (
+                      <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                        {proj.description}
+                      </p>
+                    )}
+
+                    {/* Tech Stack */}
+                    {(proj.techStack || proj.technologies || []).length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Tech Stack:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {(proj.techStack || proj.technologies).map((t, ti) => (
+                            <span
+                              key={ti}
+                              className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-semibold"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Advanced Concepts */}
+                    {(proj.advancedConcepts || []).length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Advanced Concepts Used:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {proj.advancedConcepts.map((c, ci) => (
+                            <span
+                              key={ci}
+                              className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-semibold"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Features */}
+                    {(proj.features || proj.highlights || []).length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Features:</span>
+                        <ul className="space-y-0.5 text-[11px] text-brand-slate dark:text-dark-muted list-disc list-inside">
+                          {(proj.features || proj.highlights).slice(0, 3).map((f, fi) => (
+                            <li key={fi} className="line-clamp-1">{f}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
-                  {proj.description && (
-                    <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
-                      {proj.description}
-                    </p>
-                  )}
-
-                  {/* Tech Stack */}
-                  {(proj.techStack || proj.technologies || []).length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Tech Stack:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {(proj.techStack || proj.technologies).map((t, ti) => (
-                          <span
-                            key={ti}
-                            className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-semibold"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Advanced Concepts */}
-                  {(proj.advancedConcepts || []).length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Advanced Concepts Used:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {proj.advancedConcepts.map((c, ci) => (
-                          <span
-                            key={ci}
-                            className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-semibold"
-                          >
-                            {c}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Features */}
-                  {(proj.features || proj.highlights || []).length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Features:</span>
-                      <ul className="space-y-0.5 text-[11px] text-brand-slate dark:text-dark-muted list-disc list-inside">
-                        {(proj.features || proj.highlights).slice(0, 3).map((f, fi) => (
-                          <li key={fi} className="line-clamp-1">{f}</li>
-                        ))}
-                      </ul>
+                  {/* Interview One-Liner */}
+                  {proj.interviewOneLiner && (
+                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-xs mt-2">
+                      <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block mb-0.5">💬 Interview One-Liner:</span>
+                      <p className="text-[11px] text-emerald-900 dark:text-emerald-200 font-medium">"{proj.interviewOneLiner}"</p>
                     </div>
                   )}
                 </div>
-
-                {/* Interview One-Liner */}
-                {proj.interviewOneLiner && (
-                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-xs mt-2">
-                    <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block mb-0.5">💬 Interview One-Liner:</span>
-                    <p className="text-[11px] text-emerald-900 dark:text-emerald-200 font-medium">"{proj.interviewOneLiner}"</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Section 3: Industrial Training & Work Experience */}
-        <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
-          <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-brand-cyan/10 dark:bg-dark-cyan/20 text-brand-cyan dark:text-dark-cyan flex items-center justify-center font-bold text-sm">
-                3
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                  <Briefcase size={18} className="text-brand-cyan" />
-                  <span>Industrial Training & Work Experience</span>
-                </h3>
-                <p className="text-xs text-brand-slate dark:text-dark-muted">
-                  Corporate internships, industrial programs, and domain knowledge
-                </p>
+        {trainingList.length > 0 && (
+          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-cyan/10 dark:bg-dark-cyan/20 text-brand-cyan dark:text-dark-cyan flex items-center justify-center font-bold text-sm">
+                  <Briefcase size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
+                    <Briefcase size={18} className="text-brand-cyan" />
+                    <span>Industrial Training & Work Experience ({trainingList.length})</span>
+                  </h3>
+                  <p className="text-xs text-brand-slate dark:text-dark-muted">
+                    Corporate internships, industrial programs, and domain knowledge
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-4 pt-1">
-            {trainingList.length > 0 ? (
-              trainingList.map((tr, idx) => (
+            <div className="space-y-4 pt-1">
+              {trainingList.map((tr, idx) => (
                 <div
                   key={idx}
                   className="p-5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-3"
@@ -705,168 +717,159 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                     </div>
                   )}
                 </div>
-              ))
-            ) : (
-              <div className="p-6 text-center text-xs text-brand-slate dark:text-dark-muted rounded-2xl bg-brand-surface/40 border border-dashed border-brand-border space-y-1">
-                <p className="font-semibold">No internship or training details found in your resume.</p>
-                <p>If you have internship experience, ensure it's clearly mentioned in your PDF under an "Experience" or "Training" section.</p>
-              </div>
-            )}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Section 4: Most Likely Interview Questions */}
-        <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
-          <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm">
-                4
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                  <HelpCircle size={18} className="text-amber-500" />
-                  <span>Most Likely Interview Questions From Your Resume</span>
-                </h3>
-                <p className="text-xs text-brand-slate dark:text-dark-muted">
-                  The AI generates dynamic interview questions targeting these exact topics and project concepts
-                </p>
+        {likelyQuestions.length > 0 && (
+          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm">
+                  <HelpCircle size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
+                    <HelpCircle size={18} className="text-amber-500" />
+                    <span>Most Likely Interview Questions From Your Resume</span>
+                  </h3>
+                  <p className="text-xs text-brand-slate dark:text-dark-muted">
+                    The AI generates dynamic interview questions targeting these exact topics and project concepts
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-            {likelyQuestions.map((group, gIdx) => (
-              <div
-                key={gIdx}
-                className="p-5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-3"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-purple"></span>
-                  <h4 className="text-xs sm:text-sm font-bold text-brand-charcoal dark:text-dark-text">
-                    {group.category}
-                  </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {likelyQuestions.map((group, gIdx) => (
+                <div
+                  key={gIdx}
+                  className="p-5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-brand-purple"></span>
+                    <h4 className="text-xs sm:text-sm font-bold text-brand-charcoal dark:text-dark-text">
+                      {group.category}
+                    </h4>
+                  </div>
+
+                  <ul className="space-y-2 text-xs text-brand-slate dark:text-dark-muted">
+                    {(group.questions || []).map((q, qIdx) => (
+                      <li key={qIdx} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 dark:border-dark-border/60">
+                        <HelpCircle size={14} className="text-brand-purple shrink-0 mt-0.5" />
+                        <span className="text-brand-charcoal dark:text-dark-text font-medium leading-relaxed">{q}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-
-                <ul className="space-y-2 text-xs text-brand-slate dark:text-dark-muted">
-                  {(group.questions || []).map((q, qIdx) => (
-                    <li key={qIdx} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 dark:border-dark-border/60">
-                      <HelpCircle size={14} className="text-brand-purple shrink-0 mt-0.5" />
-                      <span className="text-brand-charcoal dark:text-dark-text font-medium leading-relaxed">{q}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Section 5: Education, Certifications, Achievements & Areas of Interest */}
-        <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
-          <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
-                5
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                  <GraduationCap size={18} className="text-emerald-500" />
-                  <span>Education, Certifications, Achievements & Areas of Interest</span>
-                </h3>
-                <p className="text-xs text-brand-slate dark:text-dark-muted">
-                  Academic qualifications, verified credentials, and specialized engineering tracks
-                </p>
+        {hasAdditionalSection && (
+          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
+                  <GraduationCap size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
+                    <GraduationCap size={18} className="text-emerald-500" />
+                    <span>Education, Certifications, Achievements & Areas of Interest</span>
+                  </h3>
+                  <p className="text-xs text-brand-slate dark:text-dark-muted">
+                    Academic qualifications, verified credentials, and specialized engineering tracks
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
-            
-            {/* Education */}
-            <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                <GraduationCap size={15} className="text-brand-purple" />
-                <span>Education</span>
-              </div>
-              <div className="space-y-2">
-                {educationList.length > 0 ? (
-                  educationList.map((ed, ei) => (
-                    <div key={ei} className="text-xs pb-1 border-b border-brand-border/40 last:border-0 last:pb-0">
-                      <p className="font-bold text-brand-charcoal dark:text-dark-text">{ed.degree}</p>
-                      <p className="text-[11px] text-brand-slate dark:text-dark-muted">{ed.institution}</p>
-                      <div className="flex gap-2 text-[10px] text-brand-purple font-semibold mt-0.5">
-                        <span>{ed.year}</span>
-                        {ed.score && <span>• {ed.score}</span>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-1">
+              
+              {/* Education */}
+              {hasEducation && (
+                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
+                    <GraduationCap size={15} className="text-brand-purple" />
+                    <span>Education</span>
+                  </div>
+                  <div className="space-y-2">
+                    {educationList.map((ed, ei) => (
+                      <div key={ei} className="text-xs pb-1 border-b border-brand-border/40 last:border-0 last:pb-0">
+                        <p className="font-bold text-brand-charcoal dark:text-dark-text">{ed.degree}</p>
+                        <p className="text-[11px] text-brand-slate dark:text-dark-muted">{ed.institution}</p>
+                        <div className="flex gap-2 text-[10px] text-brand-purple font-semibold mt-0.5">
+                          <span>{ed.year}</span>
+                          {ed.score && <span>• {ed.score}</span>}
+                        </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-brand-slate dark:text-dark-muted italic">Not detected. Add education details to your resume PDF.</p>
-                )}
-              </div>
-            </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Achievements */}
-            <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                <Award size={15} className="text-amber-500" />
-                <span>Achievements</span>
-              </div>
-              <div className="space-y-1.5">
-                {achievements.length > 0 ? (
-                  achievements.map((ach, ai) => (
-                    <div key={ai} className="p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
-                      {ach}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-brand-slate dark:text-dark-muted italic">No achievements detected. Add hackathons, awards, or recognitions to your resume.</p>
-                )}
-              </div>
-            </div>
+              {/* Achievements */}
+              {hasAchievements && (
+                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
+                    <Award size={15} className="text-amber-500" />
+                    <span>Achievements</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {achievements.map((ach, ai) => (
+                      <div key={ai} className="p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
+                        {ach}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Certifications */}
-            <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                <FileCheck size={15} className="text-emerald-500" />
-                <span>Certifications</span>
-              </div>
-              <div className="space-y-1.5">
-                {certifications.length > 0 ? (
-                  certifications.map((cert, ci) => (
-                    <div key={ci} className="p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
-                      {cert}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-brand-slate dark:text-dark-muted italic">No certifications detected. Add courses or certifications to your resume.</p>
-                )}
-              </div>
-            </div>
+              {/* Certifications */}
+              {hasCertifications && (
+                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
+                    <FileCheck size={15} className="text-emerald-500" />
+                    <span>Certifications</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {certifications.map((cert, ci) => (
+                      <div key={ci} className="p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
+                        {cert}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Areas of Interest */}
-            <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                <Compass size={15} className="text-blue-500" />
-                <span>Areas of Interest</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {areasOfInterest.length > 0 ? (
-                  areasOfInterest.map((aoi, aii) => (
-                    <span
-                      key={aii}
-                      className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-semibold"
-                    >
-                      {aoi}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-xs text-brand-slate dark:text-dark-muted italic">Not detected. Add areas of interest to your resume.</p>
-                )}
-              </div>
-            </div>
+              {/* Areas of Interest */}
+              {hasAreasOfInterest && (
+                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
+                    <Compass size={15} className="text-blue-500" />
+                    <span>Areas of Interest</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {areasOfInterest.map((aoi, aii) => (
+                      <span
+                        key={aii}
+                        className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-semibold"
+                      >
+                        {aoi}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
 
       </div>
 

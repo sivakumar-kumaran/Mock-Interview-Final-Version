@@ -202,10 +202,11 @@ const getProfile = async (req, res) => {
       };
     }
 
-    // Auto-generate summary report if missing or empty on existing profile
-    if (!profileObj.summaryReport || !profileObj.summaryReport.professionalSummary || !profileObj.summaryReport.projects || profileObj.summaryReport.projects.length === 0) {
+    // Auto-generate summary report only if missing professionalSummary and report
+    if (!profileObj.summaryReport || !profileObj.summaryReport.professionalSummary) {
       try {
-        const generatedReport = await generateResumeSummaryAndReport('', profileObj, {
+        const textToUse = profile.rawText || '';
+        const generatedReport = await generateResumeSummaryAndReport(textToUse, profileObj, {
           name: profileObj.basicDetails?.fullName || user?.name || '',
           email: profileObj.basicDetails?.email || user?.email || '',
           targetRole: profileObj.targetRole
