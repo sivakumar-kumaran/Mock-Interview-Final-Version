@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import {
   HelpCircle, ChevronRight, AlertCircle, ArrowLeft, RefreshCw,
-  Eye, EyeOff, Brain, ArrowRight, BookOpen, FileText, Sparkles, Loader2, CheckCircle2
+  Eye, EyeOff, Brain, ArrowRight, BookOpen, FileText, Sparkles, Loader2
 } from 'lucide-react';
 import Toast from '../components/Toast';
 
