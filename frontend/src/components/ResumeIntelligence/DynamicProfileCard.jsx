@@ -238,6 +238,24 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
 
   return (
     <div className="space-y-8">
+
+      {/* Low-confidence warning banner */}
+      {profile.extractionLowConfidence && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-500" />
+          <div>
+            <span className="font-bold">AI analysis was unavailable during upload.</span>
+            {' '}The resume was parsed with a basic text extractor, which may be less accurate for CGPA, skills, and projects.
+            {' '}<button
+              onClick={handleReanalyzeResume}
+              className="underline font-semibold hover:text-amber-900 dark:hover:text-amber-100 transition-colors"
+            >
+              Click here to re-analyze with AI now.
+            </button>
+          </div>
+        </div>
+      )}
+
       
       {/* Hidden File Input for Photo Upload */}
       <input

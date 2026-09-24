@@ -34,12 +34,20 @@ const getOpenAI = () => {
   return null;
 };
 
-// Gemini models to try in priority order
+// Gemini models to try in priority order (only real, valid model IDs)
 const WORKING_GEMINI_MODELS = [
   'gemini-2.5-flash',
-  'gemini-3.5-flash-lite',
-  'gemini-flash-latest'
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b'
 ];
+
+// Generation config for all extraction tasks: temperature=0 for determinism
+const EXTRACTION_GENERATION_CONFIG = {
+  temperature: 0,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192
+};
 
 /**
  * Deduplicate an array of strings (case-insensitive deduplication)
@@ -234,10 +242,26 @@ function extractProfileFromRawTextFallback(rawText, userInfo = {}) {
   }
 
   // 3. Highlighted CGPA / Percentage
+  // IMPORTANT: keyword prefix is REQUIRED to avoid matching random numbers like years, phone digits, etc.
   let cgpaOrPercentage = '';
-  const cgpaMatch = text.match(/(?:cgpa|gpa|percentage|score|aggregate)?\s*[:=]?\s*(\d{1,2}(?:\.\d{1,2})?(?:\s*\/\s*(?:10|4\.0|100))?|\d{2}(?:\.\d+)?\s*%)/i);
-  if (cgpaMatch && cgpaMatch[1]) {
-    cgpaOrPercentage = cgpaMatch[1].trim();
+  const cgpaPatterns = [
+    // e.g. "CGPA: 8.5" or "CGPA: 8.5/10"
+    /(?:cgpa|gpa)\s*[:=]?\s*(\d{1,2}\.\d{1,2})(?:\s*\/\s*(?:10|4\.0))?/i,
+    // e.g. "8.5/10" standalone
+    /(\d{1,2}\.\d{1,2})\s*\/\s*10/i,
+    // e.g. "Percentage: 85%" or "85%"
+    /(?:percentage|aggregate|score)\s*[:=]?\s*(\d{2,3}(?:\.\d{1,2})?)\s*%/i,
+    // e.g. "85 percent"
+    /(?:percentage|aggregate|score)\s*[:=]?\s*(\d{2,3}(?:\.\d{1,2})?)\s*percent/i,
+    // e.g. bare "85%" only if it's a plausible score (50-100)
+    /\b([5-9]\d(?:\.\d{1,2})?)\s*%/i
+  ];
+  for (const pat of cgpaPatterns) {
+    const m = text.match(pat);
+    if (m && m[1]) {
+      cgpaOrPercentage = m[1].trim();
+      break;
+    }
   }
 
   // 4. Skills extraction strictly from text matches
@@ -551,40 +575,40 @@ OUTPUT ONLY A VALID RAW JSON OBJECT with this EXACT schema (NO MARKDOWN BACKTICK
   "likelyInterviewQuestions": [{ "category": "Project or Skill name", "questions": ["Question 1", "Question 2"] }]
 }`;
 
-  // 1. Try Gemini
+  // 1. Try Gemini with temperature=0 for deterministic, accurate extraction
   const genAI = getGenAI();
   if (genAI) {
     for (const modelName of WORKING_GEMINI_MODELS) {
       try {
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const contents = [];
+        // Use temperature=0 so the same resume always yields the same extraction
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: EXTRACTION_GENERATION_CONFIG
+        });
 
-        // If PDF buffer is available, pass inline data
-        if (fileBuffer && Buffer.isBuffer(fileBuffer) && mimeType === 'application/pdf') {
-          contents.push({
-            inlineData: {
-              data: fileBuffer.toString('base64'),
-              mimeType: 'application/pdf'
-            }
-          });
-        }
+        // Only send raw text — sending both PDF bytes and raw text duplicates context
+        // and can cause the model to conflate information from the two sources.
+        // Raw text extracted by pdf-parse is more reliable for structured extraction.
+        const fullPromptText = rawText
+          ? `${prompt}\n\nRAW RESUME TEXT:\n"""\n${rawText}\n"""`
+          : prompt;
 
-        // Add prompt with raw text if available
-        const fullPromptText = rawText ? `${prompt}\n\nRAW RESUME TEXT:\n"""\n${rawText}\n"""` : prompt;
-        contents.push(fullPromptText);
-
-        const result = await model.generateContent(contents);
+        const result = await model.generateContent(fullPromptText);
         const response = await result.response;
-        let text = response.text().trim();
+        let responseText = response.text().trim();
 
-        if (text.startsWith('```')) {
-          text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        if (responseText.startsWith('```')) {
+          responseText = responseText.replace(/^```json\s*/i, '').replace(/^```\w*\s*/i, '').replace(/```$/, '').trim();
         }
 
-        const parsed = JSON.parse(text);
+        const parsed = JSON.parse(responseText);
         if (parsed && (parsed.candidateName || parsed.skills || parsed.projects)) {
           console.log(`[ResumeService] Successfully parsed resume via Gemini model: ${modelName}`);
-          return normalizeAiExtraction(parsed, rawText, userInfo);
+          const normalized = normalizeAiExtraction(parsed, rawText, userInfo);
+
+          // Run post-extraction validation & second-call cross-check
+          const validated = await validateAndCrossCheckExtraction(normalized, rawText, genAI, modelName);
+          return validated;
         }
       } catch (err) {
         console.warn(`[ResumeService] Gemini ${modelName} error:`, err.message);
@@ -602,14 +626,15 @@ OUTPUT ONLY A VALID RAW JSON OBJECT with this EXACT schema (NO MARKDOWN BACKTICK
           { role: 'system', content: 'You extract structured resume data. Output only valid raw JSON.' },
           { role: 'user', content: `${prompt}\n\nRAW RESUME TEXT:\n"""\n${rawText}\n"""` }
         ],
-        temperature: 0.1,
+        temperature: 0,
         response_format: { type: 'json_object' }
       });
       const content = completion.choices[0]?.message?.content;
       if (content) {
         const parsed = JSON.parse(content);
         console.log('[ResumeService] Successfully parsed resume via OpenAI');
-        return normalizeAiExtraction(parsed, rawText, userInfo);
+        const normalized = normalizeAiExtraction(parsed, rawText, userInfo);
+        return await validateAndCrossCheckExtraction(normalized, rawText, genAI, null);
       }
     } catch (err) {
       console.warn('[ResumeService] OpenAI analysis error:', err.message);
@@ -618,7 +643,169 @@ OUTPUT ONLY A VALID RAW JSON OBJECT with this EXACT schema (NO MARKDOWN BACKTICK
 
   // 3. Fallback: Clean Regex NLP parser (Strictly extracts real text without fake skills or fake projects)
   console.log('[ResumeService] Using real local NLP extraction fallback');
-  return extractProfileFromRawTextFallback(rawText, userInfo);
+  const fallbackResult = extractProfileFromRawTextFallback(rawText, userInfo);
+  // Mark as low-confidence so the frontend can optionally warn the user
+  fallbackResult._extractionMethod = 'regex-fallback';
+  fallbackResult._lowConfidence = true;
+  return fallbackResult;
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────
+ * POST-EXTRACTION VALIDATION + SECOND GEMINI CROSS-CHECK
+ * ─────────────────────────────────────────────────────────────────
+ * After the first Gemini extraction, this function:
+ *  1. Validates every returned skill actually exists in the raw text
+ *  2. Validates the CGPA/percentage can be traced back to the raw text
+ *  3. Validates project titles actually appear in the raw text
+ *  4. Makes a SECOND lightweight Gemini call to verify uncertain fields
+ *  5. Returns a cleaned, evidence-based result
+ */
+async function validateAndCrossCheckExtraction(extracted, rawText, genAI, successfulModel) {
+  if (!rawText || rawText.trim().length < 30) return extracted;
+
+  const textLower = rawText.toLowerCase();
+
+  // --- 1. Validate skills ------------------------------------------------
+  const validateSkillList = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list.filter(skill => {
+      if (!skill || typeof skill !== 'string') return false;
+      // Accept the skill only if it literally appears in the raw resume text
+      return textLower.includes(skill.toLowerCase());
+    });
+  };
+
+  const validatedSkills = {
+    languages: validateSkillList(extracted.skills?.languages || []),
+    techStacks: validateSkillList(extracted.skills?.techStacks || []),
+    tools: validateSkillList(extracted.skills?.tools || [])
+  };
+
+  // Collect skills that were removed (for the cross-check prompt)
+  const removedLanguages = (extracted.skills?.languages || []).filter(s => !validatedSkills.languages.includes(s));
+  const removedTechStacks = (extracted.skills?.techStacks || []).filter(s => !validatedSkills.techStacks.includes(s));
+  const removedTools = (extracted.skills?.tools || []).filter(s => !validatedSkills.tools.includes(s));
+  const hasRemovedSkills = removedLanguages.length > 0 || removedTechStacks.length > 0 || removedTools.length > 0;
+
+  // --- 2. Validate CGPA / Percentage ------------------------------------
+  let validatedCgpa = extracted.cgpaOrPercentage || '';
+  let cgpaUncertain = false;
+  if (validatedCgpa) {
+    // Strip units and check if the numeric value appears in the raw text
+    const numericPart = validatedCgpa.replace(/[^\d.]/g, '');
+    if (numericPart && !textLower.includes(numericPart)) {
+      console.warn(`[ResumeService] CGPA validation failed: "${validatedCgpa}" not found in raw text. Marking uncertain.`);
+      validatedCgpa = '';
+      cgpaUncertain = true;
+    }
+  }
+
+  // --- 3. Validate project titles ----------------------------------------
+  const validatedProjects = (extracted.projects || []).filter(p => {
+    const title = (p.title || p.name || '').trim();
+    if (!title) return false;
+    // Accept if at least the first meaningful word of the title appears in text
+    const firstWord = title.split(/\s+/)[0].toLowerCase();
+    return firstWord.length > 2 && textLower.includes(firstWord);
+  });
+
+  // --- 4. Second Gemini cross-check call (only if something was uncertain) --
+  const needsCrossCheck = cgpaUncertain || hasRemovedSkills || validatedProjects.length !== (extracted.projects || []).length;
+  let crossCheckData = null;
+
+  if (needsCrossCheck && genAI && (successfulModel || WORKING_GEMINI_MODELS[0])) {
+    const modelToUse = successfulModel || WORKING_GEMINI_MODELS[0];
+    try {
+      const crossCheckPrompt = `You are a precise resume data verifier.
+Below is the raw resume text. Answer ONLY based on this text — do NOT invent any information.
+
+RAW RESUME TEXT:
+"""
+${rawText.slice(0, 6000)}
+"""
+
+Verification Tasks:
+1. What is the exact CGPA, GPA, or percentage score stated in this resume? Look for formats like "8.5/10", "85%", "CGPA: 8.5", "3.9/4.0". If none is found, return null.
+2. List ONLY the programming languages that are explicitly mentioned in this resume text.
+3. List ONLY the frameworks, libraries, and databases explicitly mentioned.
+4. List ONLY developer tools, cloud services, and platforms explicitly mentioned.
+5. List project titles that actually appear in this resume.
+
+Respond with ONLY a valid raw JSON object (no markdown, no extra text):
+{
+  "cgpaOrPercentage": "<exact value from resume or null>",
+  "languages": ["only what is literally in the text"],
+  "techStacks": ["only what is literally in the text"],
+  "tools": ["only what is literally in the text"],
+  "projectTitles": ["only project names that actually appear"]
+}`;
+
+      const crossModel = genAI.getGenerativeModel({
+        model: modelToUse,
+        generationConfig: EXTRACTION_GENERATION_CONFIG
+      });
+      const crossResult = await crossModel.generateContent(crossCheckPrompt);
+      let crossText = crossResult.response.text().trim();
+      if (crossText.startsWith('```')) {
+        crossText = crossText.replace(/^```json\s*/i, '').replace(/^```\w*\s*/i, '').replace(/```$/, '').trim();
+      }
+      crossCheckData = JSON.parse(crossText);
+      console.log('[ResumeService] Cross-check validation completed successfully.');
+    } catch (err) {
+      console.warn('[ResumeService] Cross-check call failed (non-critical):', err.message);
+    }
+  }
+
+  // --- 5. Merge cross-check results -------------------------------------
+  if (crossCheckData) {
+    // Use cross-check CGPA if original was uncertain or empty
+    if (cgpaUncertain && crossCheckData.cgpaOrPercentage && crossCheckData.cgpaOrPercentage !== 'null') {
+      validatedCgpa = String(crossCheckData.cgpaOrPercentage).trim();
+    }
+
+    // Merge cross-check skills with validated skills (union, still text-verified)
+    if (Array.isArray(crossCheckData.languages) && crossCheckData.languages.length > 0) {
+      const merged = [...validatedSkills.languages, ...validateSkillList(crossCheckData.languages)];
+      validatedSkills.languages = deduplicateList(merged);
+    }
+    if (Array.isArray(crossCheckData.techStacks) && crossCheckData.techStacks.length > 0) {
+      const merged = [...validatedSkills.techStacks, ...validateSkillList(crossCheckData.techStacks)];
+      validatedSkills.techStacks = deduplicateList(merged);
+    }
+    if (Array.isArray(crossCheckData.tools) && crossCheckData.tools.length > 0) {
+      const merged = [...validatedSkills.tools, ...validateSkillList(crossCheckData.tools)];
+      validatedSkills.tools = deduplicateList(merged);
+    }
+
+    // Recover any valid projects identified by cross-check
+    if (Array.isArray(crossCheckData.projectTitles) && crossCheckData.projectTitles.length > 0) {
+      const crossTitlesLower = crossCheckData.projectTitles.map(t => t.toLowerCase());
+      const allProjects = extracted.projects || [];
+      const recoveredProjects = allProjects.filter(p => {
+        const title = (p.title || p.name || '').toLowerCase();
+        return crossTitlesLower.some(ct => title.includes(ct) || ct.includes(title.split(' ')[0]));
+      });
+      // Use validated list or recovered list, whichever is longer
+      if (recoveredProjects.length > validatedProjects.length) {
+        extracted.projects = recoveredProjects;
+      }
+    }
+  }
+
+  // --- 6. Apply validated results ---------------------------------------
+  // Apply globally deduplicated skills (no skill in two categories)
+  const finalSkills = deduplicateSkillsAcrossCategories(validatedSkills);
+
+  return {
+    ...extracted,
+    skills: finalSkills,
+    cgpaOrPercentage: validatedCgpa,
+    projects: validatedProjects.length > 0 ? validatedProjects : (extracted.projects || []),
+    _extractionMethod: 'gemini-validated',
+    _lowConfidence: false,
+    _cgpaUncertain: cgpaUncertain && !validatedCgpa
+  };
 }
 
 /**
@@ -637,10 +824,27 @@ function normalizeAiExtraction(data, rawText, userInfo = {}) {
   const targetRole = data.targetRole || userInfo.targetRole || 'Full Stack Developer';
 
   // Highlighted CGPA / Percentage
+  // Guard against: literal null string, prompt placeholder text, or non-numeric garbage
   let cgpaOrPercentage = data.cgpaOrPercentage ? String(data.cgpaOrPercentage).trim() : '';
+  const CGPA_GARBAGE_PATTERNS = [
+    /^null$/i,
+    /^n\/a$/i,
+    /highlighted cgpa/i,
+    /or percentage/i,
+    /not mentioned/i,
+    /not stated/i,
+    /not available/i,
+    /not found/i
+  ];
+  if (cgpaOrPercentage && CGPA_GARBAGE_PATTERNS.some(p => p.test(cgpaOrPercentage))) {
+    cgpaOrPercentage = '';
+  }
   const eduList = Array.isArray(data.education) ? data.education : [];
   if (!cgpaOrPercentage && eduList.length > 0 && eduList[0].score) {
-    cgpaOrPercentage = String(eduList[0].score).trim();
+    const rawScore = String(eduList[0].score).trim();
+    if (!CGPA_GARBAGE_PATTERNS.some(p => p.test(rawScore))) {
+      cgpaOrPercentage = rawScore;
+    }
   }
 
   // Strict cross-category deduplication for skills

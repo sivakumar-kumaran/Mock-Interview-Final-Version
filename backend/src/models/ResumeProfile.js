@@ -144,6 +144,15 @@ const resumeProfileSchema = new mongoose.Schema({
   currentVersion: {
     type: Number,
     default: 1
+  },
+  extractionMethod: {
+    type: String,
+    default: 'gemini-validated',
+    enum: ['gemini-validated', 'regex-fallback', 'openai-validated']
+  },
+  extractionLowConfidence: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

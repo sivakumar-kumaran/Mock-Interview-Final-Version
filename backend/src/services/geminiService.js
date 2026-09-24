@@ -2,7 +2,11 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const vm = require('vm');
 const { SQL_QUESTIONS, PROGRAMMING_QUESTIONS } = require('../data/codingQuestions');
 
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest'];
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b'
+];
 
 const getGenAI = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -251,33 +255,39 @@ const generateResumeInterviewQuestions = async (profile, difficulty = 'Intermedi
   const sqlStarter = selectedSql.starterCode.sql;
 
   const p1 = projects[0]?.title || projects[0]?.name || 'Primary Project';
-  const p1Tech = (projects[0]?.techStack || projects[0]?.technologies || []).slice(0, 3).join(', ') || 'software architecture';
-  const p2 = projects[1]?.title || projects[1]?.name;
-  const p2Tech = (projects[1]?.techStack || projects[1]?.technologies || []).slice(0, 3).join(', ') || 'modern frameworks';
+  const p2 = projects[1]?.title || projects[1]?.name || null;
+  const p3 = projects[2]?.title || projects[2]?.name || null;
 
-  let stage1Question = `Walk me through the architecture of "${p1}". What key technical trade-offs did you make while building it with ${p1Tech}?`;
+  // Short fallback questions (5-6 words each)
+  let stage1Question = `Explain your "${p1}" project architecture.`;
   let stage2Question = p2
-    ? `In your "${p2}" project, how did you structure the backend and handle component integration using ${p2Tech}?`
-    : `In "${p1}", explain a complex technical bug or performance challenge you faced and how you diagnosed and debugged it.`;
-  let stage5Question = `During your training or project work, explain how you ensure data reliability and system scalability. What considerations do you take when designing REST APIs and database schemas?`;
-  let stage6Question = `Tell me about a situation in a team project where you faced tight deadlines or conflicting technical opinions. How did you resolve it?`;
+    ? `Walk me through "${p2}" project.`
+    : `Hardest bug in "${p1}"?`;
+  let stage5Question = p3
+    ? `Describe your "${p3}" project.`
+    : `How did you scale "${p1}"?`;
+  let stage6Question = `Describe a difficult team situation.`;
 
   const genAI = getGenAI();
   if (genAI) {
     try {
-      const prompt = `You are a Senior Engineering Hiring Manager tailoring a 6-stage interview for a candidate.
-Candidate Target Role: ${profile.targetRole || 'Software Engineer'}
+      const prompt = `You are a Senior Hiring Manager generating SHORT interview questions (5-6 words max each).
 Candidate Projects: ${projects.map(p => p.title || p.name).join(', ')}
-Candidate Skills: ${(profile.skills?.technical || []).join(', ')}
+Target Role: ${profile.targetRole || 'Software Engineer'}
 
-Generate tailored verbal interview questions for Stage 1, Stage 2, Stage 5, and Stage 6.
-Do NOT generate coding questions (those are fixed).
-Output ONLY valid raw JSON:
+RULES:
+- Each question must be 5-6 words MAXIMUM. No long sentences.
+- stage1 must ask about: ${p1}
+- stage2 must ask about: ${p2 || p1}
+- stage5 must ask about: ${p3 || p2 || p1}
+- stage6 must be a short behavioral question
+
+Output ONLY valid raw JSON (no markdown):
 {
-  "stage1": "<tailored project architecture question for ${p1}>",
-  "stage2": "<tailored technical concept question>",
-  "stage5": "<tailored system architecture / data flow question>",
-  "stage6": "<tailored situational engineering question>"
+  "stage1": "<5-6 word question about ${p1}>",
+  "stage2": "<5-6 word question about ${p2 || p1}>",
+  "stage5": "<5-6 word question about ${p3 || p2 || p1}>",
+  "stage6": "<5-6 word behavioral question>"
 }`;
       const verbalData = await generateGeminiContentWithFallback(genAI, prompt);
       if (verbalData.stage1) stage1Question = verbalData.stage1;
@@ -288,6 +298,7 @@ Output ONLY valid raw JSON:
       console.warn('Using baseline tailored verbal questions:', err.message);
     }
   }
+
 
   return [
     {

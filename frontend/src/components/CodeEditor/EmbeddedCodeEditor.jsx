@@ -55,6 +55,43 @@ const EmbeddedCodeEditor = ({
     if (onCodeChange) onCodeChange(updated, language);
   };
 
+  // Auto-close brackets, braces, parentheses, and quotes
+  const handleKeyDown = (e) => {
+    const pairs = { '(': ')', '[': ']', '{': '}', "'": "'", '"': '"', '`': '`' };
+    const open = e.key;
+    if (!pairs[open]) return;
+
+    const textarea = e.target;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentCode = textarea.value;
+
+    // If text is selected, wrap it
+    if (start !== end) {
+      e.preventDefault();
+      const selected = currentCode.slice(start, end);
+      const newCode = currentCode.slice(0, start) + open + selected + pairs[open] + currentCode.slice(end);
+      setCode(newCode);
+      if (onCodeChange) onCodeChange(newCode, language);
+      // Restore selection inside the pair
+      requestAnimationFrame(() => {
+        textarea.selectionStart = start + 1;
+        textarea.selectionEnd = end + 1;
+      });
+      return;
+    }
+
+    // No selection: insert both characters and place cursor between them
+    e.preventDefault();
+    const newCode = currentCode.slice(0, start) + open + pairs[open] + currentCode.slice(end);
+    setCode(newCode);
+    if (onCodeChange) onCodeChange(newCode, language);
+    requestAnimationFrame(() => {
+      textarea.selectionStart = start + 1;
+      textarea.selectionEnd = start + 1;
+    });
+  };
+
   const handleRun = async () => {
     if (!onRunCode || running) return;
     setRunning(true);
@@ -176,6 +213,7 @@ const EmbeddedCodeEditor = ({
         <textarea
           value={code}
           onChange={handleCodeChange}
+          onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder="// write your code inside function call"
           spellCheck="false"

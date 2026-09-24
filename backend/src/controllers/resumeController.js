@@ -80,7 +80,9 @@ const uploadResume = async (req, res) => {
       areasOfInterest: extractedData.areasOfInterest || [],
       likelyInterviewQuestions: extractedData.likelyInterviewQuestions || [],
       summaryReport: extractedData.summaryReport || null,
-      currentVersion: newVersionNumber
+      currentVersion: newVersionNumber,
+      extractionMethod: extractedData._extractionMethod || 'gemini-validated',
+      extractionLowConfidence: Boolean(extractedData._lowConfidence)
     };
 
     const savedProfile = await ResumeProfile.findOneAndUpdate(
@@ -430,7 +432,9 @@ const pasteResumeText = async (req, res) => {
       areasOfInterest: extractedData.areasOfInterest || [],
       likelyInterviewQuestions: extractedData.likelyInterviewQuestions || [],
       summaryReport: extractedData.summaryReport || null,
-      currentVersion: newVersionNumber
+      currentVersion: newVersionNumber,
+      extractionMethod: extractedData._extractionMethod || 'gemini-validated',
+      extractionLowConfidence: Boolean(extractedData._lowConfidence)
     };
 
     const savedProfile = await ResumeProfile.findOneAndUpdate(
