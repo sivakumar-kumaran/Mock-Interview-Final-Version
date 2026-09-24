@@ -2,41 +2,57 @@ import React, { useState, useEffect } from 'react';
 import { Play, CheckCircle2, XCircle, Code2, RefreshCw, Terminal, Check, Sparkles, Loader2, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
 
 const LANGUAGE_TEMPLATES = {
-  java: `public class Solution {\n    public static int findSecondHighest(int[] nums) {\n        // Write your solution here\n        return -1;\n    }\n}`,
-  javascript: `function findSecondHighest(nums) {\n    // Write your solution here\n    return -1;\n}`,
-  python: `def find_second_highest(nums):\n    # Write your solution here\n    return -1`,
-  sql: `-- Write your SQL query below\nSELECT \n    MAX(salary) AS SecondHighestSalary\nFROM Employees;\n`
+  java: `class Solution {\n    // write your code inside function call\n}`,
+  javascript: `function solve() {\n    // write your code inside function call\n    \n}`,
+  python: `def solve():\n    # write your code inside function call\n    pass`,
+  sql: `-- write your code inside function call\nSELECT \n    \nFROM ;`
 };
 
 const EmbeddedCodeEditor = ({
   question,
   initialLanguage = 'javascript',
   starterCode = '',
+  starterCodes = null,
   testCases = [],
   onRunCode,
   onSubmitCode,
+  onCodeChange,
   disabled = false
 }) => {
   const [language, setLanguage] = useState(initialLanguage || 'javascript');
-  const [code, setCode] = useState(starterCode || LANGUAGE_TEMPLATES[initialLanguage] || LANGUAGE_TEMPLATES.javascript);
+  
+  const getInitialCode = (lang) => {
+    if (starterCodes && starterCodes[lang]) return starterCodes[lang];
+    if (starterCode && typeof starterCode === 'string' && (lang === initialLanguage || !starterCodes)) return starterCode;
+    return LANGUAGE_TEMPLATES[lang] || LANGUAGE_TEMPLATES.javascript;
+  };
+
+  const [code, setCode] = useState(() => getInitialCode(initialLanguage));
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
-    if (starterCode) {
-      setCode(starterCode);
-    } else if (LANGUAGE_TEMPLATES[language]) {
-      setCode(LANGUAGE_TEMPLATES[language]);
-    }
-  }, [starterCode, language]);
+    const nextLang = initialLanguage || 'javascript';
+    setLanguage(nextLang);
+    const newCode = getInitialCode(nextLang);
+    setCode(newCode);
+    setResults(null);
+    if (onCodeChange) onCodeChange(newCode, nextLang);
+  }, [question, initialLanguage, starterCode, starterCodes]);
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
     setLanguage(newLang);
-    if (!starterCode && LANGUAGE_TEMPLATES[newLang]) {
-      setCode(LANGUAGE_TEMPLATES[newLang]);
-    }
+    const newCode = getInitialCode(newLang);
+    setCode(newCode);
+    if (onCodeChange) onCodeChange(newCode, newLang);
+  };
+
+  const handleCodeChange = (e) => {
+    const updated = e.target.value;
+    setCode(updated);
+    if (onCodeChange) onCodeChange(updated, language);
   };
 
   const handleRun = async () => {
@@ -65,8 +81,10 @@ const EmbeddedCodeEditor = ({
   };
 
   const handleReset = () => {
-    setCode(starterCode || LANGUAGE_TEMPLATES[language] || '');
+    const resetCode = getInitialCode(language);
+    setCode(resetCode);
     setResults(null);
+    if (onCodeChange) onCodeChange(resetCode, language);
   };
 
   const currentTestCase = testCases[activeTab] || { id: activeTab + 1, isHidden: false, input: 'Standard Case', expected: 'Output' };
@@ -157,9 +175,9 @@ const EmbeddedCodeEditor = ({
         {/* Text Area */}
         <textarea
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={handleCodeChange}
           disabled={disabled}
-          placeholder="Write your code solution here..."
+          placeholder="// write your code inside function call"
           spellCheck="false"
           className="flex-1 p-3 bg-transparent text-slate-100 resize-none font-mono text-xs sm:text-sm leading-6 focus:outline-none focus:ring-0 selection:bg-brand-purple/40"
         />

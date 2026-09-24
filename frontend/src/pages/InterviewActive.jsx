@@ -54,6 +54,8 @@ const InterviewActive = () => {
   const [isVideoBlurred, setIsVideoBlurred] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
+  const [activeCode, setActiveCode] = useState('');
+  const [activeLanguage, setActiveLanguage] = useState('javascript');
 
   // Refs
   const recognitionRef = useRef(null);
@@ -364,7 +366,16 @@ const InterviewActive = () => {
   const handleTimeOut = () => {
     setToast({ message: 'Time limit reached. Submitting answer automatically.', type: 'info' });
     stopSpeechRecognition();
-    submitActiveAnswer(transcript);
+    const isCodingRound = currentQuestion?.type === 'coding' || currentQuestion?.category === 'coding';
+    if (isCodingRound) {
+      submitActiveAnswer(activeCode, {
+        code: activeCode,
+        language: activeLanguage,
+        testCases: currentQuestion.testCases || []
+      });
+    } else {
+      submitActiveAnswer(transcript);
+    }
   };
 
   const startRecording = () => {
@@ -404,7 +415,16 @@ const InterviewActive = () => {
 
   const handleSubmitAnswer = () => {
     stopSpeechRecognition();
-    submitActiveAnswer(transcript);
+    const isCodingRound = currentQuestion?.type === 'coding' || currentQuestion?.category === 'coding';
+    if (isCodingRound) {
+      submitActiveAnswer(activeCode, {
+        code: activeCode,
+        language: activeLanguage,
+        testCases: currentQuestion.testCases || []
+      });
+    } else {
+      submitActiveAnswer(transcript);
+    }
   };
 
   const handleSkipQuestion = () => {
@@ -646,7 +666,12 @@ const InterviewActive = () => {
                 question={currentQuestion.question}
                 initialLanguage={currentQuestion.language || 'javascript'}
                 starterCode={currentQuestion.starterCode || ''}
+                starterCodes={currentQuestion.starterCodes || null}
                 testCases={currentQuestion.testCases || []}
+                onCodeChange={(c, lang) => {
+                  setActiveCode(c);
+                  setActiveLanguage(lang);
+                }}
                 onRunCode={(q, code, lang, tc) => runCode(q, code, lang, tc)}
                 onSubmitCode={(codeData) => {
                   submitActiveAnswer(codeData.code, codeData);
@@ -789,33 +814,50 @@ const InterviewActive = () => {
       <div className="shrink-0 bg-[#0B101D] border-t border-slate-800/90 px-4 py-2.5 z-20 shadow-2xl">
         <div className="max-w-7xl mx-auto space-y-2">
           
-          {/* Live Transcript Input / Textarea */}
-          <div className="relative">
-            <input
-              type="text"
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Click 'Record' to speak your answer, or type your response here directly..."
-              className="w-full h-11 px-4 pr-20 bg-[#070B14] border border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all shadow-inner"
-            />
-            {transcript && (
-              <button
-                type="button"
-                onClick={() => setTranscript('')}
-                className="absolute right-3 top-2.5 p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors text-xs"
-                title="Clear text"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
+          {/* Interactive Input Area: Hidden or customized for coding rounds */}
+          {currentQuestion?.type === 'coding' || currentQuestion?.category === 'coding' ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 bg-[#090E1A] border border-slate-800 rounded-xl">
+              <div className="flex items-center gap-2 text-xs text-slate-300">
+                <Code2 size={16} className="text-emerald-400" />
+                <span className="font-semibold text-white">LeetCode Function Call Mode</span>
+                <span className="text-slate-500 hidden sm:inline">• Write solution inside function and return answer</span>
+              </div>
+              <div className="text-[11px] font-mono text-slate-400">
+                Language: <span className="text-emerald-400 font-bold uppercase">{activeLanguage}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="relative">
+              <input
+                type="text"
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                placeholder="Click 'Record' to speak your answer, or type your response here directly..."
+                className="w-full h-11 px-4 pr-20 bg-[#070B14] border border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all shadow-inner"
+              />
+              {transcript && (
+                <button
+                  type="button"
+                  onClick={() => setTranscript('')}
+                  className="absolute right-3 top-2.5 p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors text-xs"
+                  title="Clear text"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          )}
 
-          {/* Controls Bar: Mic cluster on left, Submission actions on right */}
+          {/* Controls Bar: Mic cluster on left for verbal, Submission actions on right */}
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             
-            {/* Left: Recording Controls */}
+            {/* Left: Recording Controls (only for verbal) */}
             <div className="flex items-center gap-2">
-              {!isRecording ? (
+              {currentQuestion?.type === 'coding' || currentQuestion?.category === 'coding' ? (
+                <span className="text-xs text-slate-400 font-medium">
+                  {activeCode?.trim() ? `${activeCode.trim().split('\n').length} lines of code ready` : 'Write your code in editor above'}
+                </span>
+              ) : !isRecording ? (
                 <button
                   type="button"
                   onClick={startRecording}
@@ -856,9 +898,11 @@ const InterviewActive = () => {
                 </div>
               )}
 
-              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline ml-1">
-                {transcript.trim() ? `${transcript.trim().split(/\s+/).length} words spoken` : '0 words'}
-              </span>
+              {currentQuestion?.type !== 'coding' && currentQuestion?.category !== 'coding' && (
+                <span className="text-[11px] text-slate-400 font-medium hidden sm:inline ml-1">
+                  {transcript.trim() ? `${transcript.trim().split(/\s+/).length} words spoken` : '0 words'}
+                </span>
+              )}
             </div>
 
             {/* Right: Submit / Skip / End Actions */}

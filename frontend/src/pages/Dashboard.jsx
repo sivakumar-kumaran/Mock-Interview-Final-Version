@@ -79,9 +79,6 @@ const Dashboard = () => {
                 <h2 className="text-xl sm:text-2xl font-extrabold text-brand-charcoal dark:text-dark-text font-outfit">
                   Resume Intelligence & Profile
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-brand-purple text-white text-[10px] font-bold uppercase tracking-wider">
-                  Version 2
-                </span>
               </div>
               <p className="text-xs text-brand-slate dark:text-dark-muted">
                 Extracts projects, skills, and feeds dynamic questions into your mock interviews

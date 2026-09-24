@@ -34,8 +34,8 @@ const interviewSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['completed', 'terminated'],
-    default: 'completed'
+    enum: ['in-progress', 'completed', 'terminated'],
+    default: 'in-progress'
   },
   violationsCount: {
     type: Number,

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { UploadCloud, FileText, CheckCircle2, AlertCircle, X, Loader2, Image, Sparkles, ClipboardCheck } from 'lucide-react';
+import ResumeAnalyzingCard from './ResumeAnalyzingCard';
 
 const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = false }) => {
   const [activeTab, setActiveTab] = useState('pdf'); // 'pdf' | 'paste'
@@ -11,6 +12,8 @@ const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = fal
   const [photoPreview, setPhotoPreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
   const [error, setError] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const fileInputRef = useRef(null);
@@ -71,6 +74,8 @@ const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = fal
     }
 
     setLoading(true);
+    setAnalyzing(true);
+    setAnalysisComplete(false);
     setError(null);
 
     try {
@@ -80,23 +85,15 @@ const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = fal
         formData.append('resume', file);
         if (targetRole) formData.append('targetRole', targetRole);
 
-        const res = await axios.post('/api/resume/upload', formData, {
+        await axios.post('/api/resume/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-
-        if (res.data.success) {
-          setStatusMessage('Structured profile created successfully!');
-        }
       } else if (activeTab === 'paste') {
         setStatusMessage('Parsing pasted resume with Gemini AI...');
-        const res = await axios.post('/api/resume/paste-text', {
+        await axios.post('/api/resume/paste-text', {
           resumeText: pastedText.trim(),
           targetRole: targetRole.trim() || undefined
         });
-
-        if (res.data.success) {
-          setStatusMessage('Structured profile created successfully!');
-        }
       }
 
       // Upload Profile Photo if provided
@@ -110,15 +107,35 @@ const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = fal
         });
       }
 
-      setLoading(false);
-      if (onUploadSuccess) onUploadSuccess();
-      onClose();
+      // Trigger "Payment Done" style success animation
+      setAnalyzing(false);
+      setAnalysisComplete(true);
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.response?.data?.message || 'Failed to extract resume data. Please try again.');
       setLoading(false);
+      setAnalyzing(false);
+      setAnalysisComplete(false);
     }
   };
+
+  const handleAnalysisFinished = () => {
+    setLoading(false);
+    setAnalyzing(false);
+    setAnalysisComplete(false);
+    if (onUploadSuccess) onUploadSuccess();
+    onClose();
+  };
+
+  if (analyzing || analysisComplete) {
+    return (
+      <ResumeAnalyzingCard
+        isAnalyzing={analyzing}
+        isComplete={analysisComplete}
+        onComplete={handleAnalysisFinished}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">

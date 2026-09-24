@@ -106,11 +106,15 @@ const uploadResume = async (req, res) => {
       snapshot: savedProfile.toObject()
     });
 
-    // 5. Update User flags & target role
-    await User.findByIdAndUpdate(userId, {
+    // 5. Update User flags, target role & candidate name
+    const userUpdateFields = {
       hasUploadedResume: true,
       targetRole: savedProfile.targetRole
-    });
+    };
+    if (savedProfile.basicDetails?.fullName && savedProfile.basicDetails.fullName !== 'Candidate' && savedProfile.basicDetails.fullName !== 'Candidate Profile') {
+      userUpdateFields.name = savedProfile.basicDetails.fullName;
+    }
+    await User.findByIdAndUpdate(userId, userUpdateFields);
 
     return res.status(200).json({
       success: true,
@@ -452,11 +456,15 @@ const pasteResumeText = async (req, res) => {
       snapshot: savedProfile.toObject()
     });
 
-    // 5. Update User flags & target role
-    await User.findByIdAndUpdate(userId, {
+    // 5. Update User flags, target role & candidate name
+    const userUpdateFields = {
       hasUploadedResume: true,
       targetRole: savedProfile.targetRole
-    });
+    };
+    if (savedProfile.basicDetails?.fullName && savedProfile.basicDetails.fullName !== 'Candidate' && savedProfile.basicDetails.fullName !== 'Candidate Profile') {
+      userUpdateFields.name = savedProfile.basicDetails.fullName;
+    }
+    await User.findByIdAndUpdate(userId, userUpdateFields);
 
     return res.status(200).json({
       success: true,

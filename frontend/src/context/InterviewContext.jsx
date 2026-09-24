@@ -167,14 +167,14 @@ export const InterviewProvider = ({ children }) => {
       answer: answerText || ''
     };
 
-    if (codeSubmission) {
+    if (codeSubmission || currentQuestion.type === 'coding' || currentQuestion.category === 'coding') {
       newResponse = {
         ...newResponse,
         responseType: 'coding',
-        code: codeSubmission.code || '',
-        language: codeSubmission.language || 'javascript',
+        code: codeSubmission?.code || answerText || '',
+        language: codeSubmission?.language || currentQuestion.language || 'javascript',
         testCases: currentQuestion.testCases || [],
-        answer: codeSubmission.code || answerText || ''
+        answer: codeSubmission?.code || answerText || ''
       };
     }
 

@@ -434,6 +434,8 @@ const startResumeInterview = async (req, res) => {
   }
 };
 
+const { SQL_QUESTIONS, PROGRAMMING_QUESTIONS } = require('../data/codingQuestions');
+
 /**
  * @desc    Run and evaluate code submission in real-time
  * @route   POST /api/interview/resume/code-run
@@ -447,7 +449,16 @@ const runCodeEvaluation = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide question and code.' });
     }
 
-    const evaluation = await evaluateCodeSubmission(question, code, language || 'javascript', testCases || []);
+    let activeTestCases = testCases || [];
+    if (!activeTestCases.length) {
+      const matched = PROGRAMMING_QUESTIONS.find(p => question.includes(p.title) || p.title.includes(question))
+        || SQL_QUESTIONS.find(s => question.includes(s.title) || s.title.includes(question));
+      if (matched && matched.testCases) {
+        activeTestCases = matched.testCases;
+      }
+    }
+
+    const evaluation = await evaluateCodeSubmission(question, code, language || 'javascript', activeTestCases);
 
     return res.status(200).json({
       success: true,
@@ -504,11 +515,20 @@ const submitResumeInterview = async (req, res) => {
       let evaluation = null;
 
       if (resItem.responseType === 'coding' || resItem.type === 'coding' || resItem.code) {
+        let activeTestCases = resItem.testCases || [];
+        if (!activeTestCases.length) {
+          const matched = PROGRAMMING_QUESTIONS.find(p => (resItem.question || '').includes(p.title) || p.title.includes(resItem.question || ''))
+            || SQL_QUESTIONS.find(s => (resItem.question || '').includes(s.title) || s.title.includes(resItem.question || ''));
+          if (matched && matched.testCases) {
+            activeTestCases = matched.testCases;
+          }
+        }
+
         evaluation = await evaluateCodeSubmission(
           resItem.question,
           resItem.code || resItem.answer,
           resItem.language || 'javascript',
-          resItem.testCases || []
+          activeTestCases
         );
       } else {
         evaluation = await evaluateResponse(

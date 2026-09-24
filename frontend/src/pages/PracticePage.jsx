@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import {
   HelpCircle, ChevronRight, AlertCircle, ArrowLeft, RefreshCw,
-  Eye, EyeOff, Brain, ArrowRight, BookOpen, FileText, Sparkles, Loader2
+  Eye, EyeOff, Brain, ArrowRight, BookOpen, FileText, Sparkles, Loader2, CheckCircle2
 } from 'lucide-react';
 import Toast from '../components/Toast';
 
@@ -370,8 +370,9 @@ const PracticePage = () => {
       {activeTab === 'resume' && (
         <div className="space-y-6">
           {resumeLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 size={32} className="animate-spin text-brand-purple" />
+            <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-dark-card rounded-2xl shadow-md">
+              <Loader2 size={32} className="animate-spin text-brand-purple mb-2" />
+              <p className="text-brand-charcoal dark:text-dark-text mt-2">Analyzing your resume...</p>
             </div>
           ) : !resumeProfile ? (
             <div className="text-center py-16 bg-white dark:bg-dark-card rounded-3xl border-2 border-dashed border-brand-purple/30 dark:border-dark-purple/30 space-y-4">
@@ -436,6 +437,7 @@ const PracticePage = () => {
                       }`}>
                         {idx + 1}
                       </span>
+                      
                       <div className="space-y-1 flex-1">
                         <span className="text-[10px] font-bold text-brand-purple dark:text-dark-purple uppercase tracking-wider">
                           {item.category}

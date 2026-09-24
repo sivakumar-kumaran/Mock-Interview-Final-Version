@@ -3,7 +3,6 @@ import axios from 'axios';
 import {
   Code,
   Sparkles,
-  Check,
   UploadCloud,
   ExternalLink,
   Award,
@@ -16,24 +15,24 @@ import {
   Linkedin,
   Terminal,
   FileCheck,
-  Database,
   Layers,
   Wrench,
   Copy,
   CheckCheck,
-  BookOpen,
   Briefcase,
   HelpCircle,
   GraduationCap,
   RefreshCw,
-  Cpu,
-  Compass
+  Compass,
+  CheckCircle2
 } from 'lucide-react';
+import ResumeAnalyzingCard from './ResumeAnalyzingCard';
 
 const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyzeComplete, setReanalyzeComplete] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(user?.avatarUrl || '');
   const [copiedPitch, setCopiedPitch] = useState(false);
@@ -45,7 +44,7 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
   const skills = profile.skills || {};
   const summaryReport = profile.summaryReport || {};
 
-  // Clean Candidate Name & Email
+  // Clean Candidate Name & Email strictly from extracted data or user
   const displayName = (basic.fullName && basic.fullName !== 'Candidate Profile') 
     ? basic.fullName 
     : (user?.name || 'Candidate');
@@ -63,6 +62,11 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
   const linkedinLink = basic.linkedin || '';
   const portfolioLink = basic.portfolio || '';
   const leetcodeLink = basic.leetcode || '';
+
+  // Highlighted CGPA / Percentage
+  const educationList = summaryReport.education || profile.education || [];
+  const highlightedScore = basic.cgpaOrPercentage || summaryReport.cgpaOrPercentage || educationList[0]?.score || '';
+  const primaryEdu = educationList.length > 0 ? educationList[0] : null;
 
   // Delete Resume
   const handleDeleteResume = async () => {
@@ -84,14 +88,18 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
   const handleReanalyzeResume = async () => {
     try {
       setReanalyzing(true);
+      setReanalyzeComplete(false);
       const res = await axios.post('/api/resume/re-analyze');
-      if (res.data.success && onProfileUpdated) {
-        onProfileUpdated();
+      if (res.data.success) {
+        setReanalyzing(false);
+        setReanalyzeComplete(true);
+      } else {
+        setReanalyzing(false);
       }
     } catch (err) {
       console.error('Failed to re-analyze resume:', err);
-    } finally {
       setReanalyzing(false);
+      setReanalyzeComplete(false);
     }
   };
 
@@ -125,7 +133,7 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
     }
   };
 
-  // Copy 30-sec pitch to clipboard
+  // Copy Summary to clipboard
   const handleCopyPitch = () => {
     const pitchText = summaryReport.professionalSummary || profile.summary || '';
     if (pitchText) {
@@ -135,9 +143,9 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
     }
   };
 
-  // Cross-category deduplication ensuring no skill appears twice anywhere in the profile
+  // Strict Global Cross-Category Deduplication: No skill appears twice anywhere
   const globalSeenSkills = new Set();
-  const dedupeSkillsAcrossAll = (arr) => {
+  const dedupeSkills = (arr) => {
     if (!Array.isArray(arr)) return [];
     const out = [];
     for (const item of arr) {
@@ -152,87 +160,80 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
     return out;
   };
 
+  // 3 distinct skill categories strictly adhering to requirements: Languages, Tech Stacks, Tools
   const categorizedSkills = [
     {
       name: 'Languages',
       icon: Code,
       iconColor: 'text-emerald-500',
       badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 hover:border-emerald-500/40',
-      skills: dedupeSkillsAcrossAll(summaryReport.technicalSkills?.languages || skills.technical || [])
+      skills: dedupeSkills(summaryReport.technicalSkills?.languages || skills.technical || [])
     },
     {
-      name: 'Core CS Fundamentals',
-      icon: BookOpen,
-      iconColor: 'text-teal-500',
-      badgeClass: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20 hover:border-teal-500/40',
-      skills: dedupeSkillsAcrossAll(summaryReport.technicalSkills?.coreCS || [])
-    },
-    {
-      name: 'Frameworks & Web / Backend',
+      name: 'Tech Stacks & Frameworks',
       icon: Layers,
       iconColor: 'text-purple-500',
       badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20 hover:border-purple-500/40',
-      skills: dedupeSkillsAcrossAll([
+      skills: dedupeSkills([
         ...(summaryReport.technicalSkills?.backend || []),
         ...(summaryReport.technicalSkills?.frontend || []),
-        ...(skills.frameworks || [])
+        ...(summaryReport.technicalSkills?.databases || []),
+        ...(skills.frameworks || []),
+        ...(skills.databases || [])
       ])
-    },
-    {
-      name: 'Databases & Storage',
-      icon: Database,
-      iconColor: 'text-blue-500',
-      badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 hover:border-blue-500/40',
-      skills: dedupeSkillsAcrossAll(summaryReport.technicalSkills?.databases || skills.databases || [])
-    },
-    {
-      name: 'AI / ML & Advanced Tech',
-      icon: Cpu,
-      iconColor: 'text-rose-500',
-      badgeClass: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20 hover:border-rose-500/40',
-      skills: dedupeSkillsAcrossAll(summaryReport.technicalSkills?.aiMl || [])
     },
     {
       name: 'Tools & Platforms',
       icon: Wrench,
       iconColor: 'text-amber-500',
       badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 hover:border-amber-500/40',
-      skills: dedupeSkillsAcrossAll(summaryReport.technicalSkills?.tools || skills.tools || [])
+      skills: dedupeSkills(summaryReport.technicalSkills?.tools || skills.tools || [])
     }
   ].filter(cat => cat.skills.length > 0);
 
   const totalSkillsCount = categorizedSkills.reduce((sum, cat) => sum + cat.skills.length, 0);
 
-  const projectsList = summaryReport.projects || (profile.projects || []).map(p => ({
-    title: p.name,
-    description: p.summary,
-    techStack: p.technologies || [],
-    features: p.highlights || [],
-    advancedConcepts: p.advancedConcepts || [],
-    interviewOneLiner: `Developed ${p.name}.`
-  }));
+  // Real Projects
+  const projectsList = (summaryReport.projects && summaryReport.projects.length > 0)
+    ? summaryReport.projects
+    : (profile.projects || []).map(p => ({
+        title: p.name,
+        description: p.summary || '',
+        techStack: p.technologies || [],
+        features: p.highlights || [],
+        githubUrl: p.githubUrl || '',
+        liveUrl: p.liveUrl || ''
+      }));
 
-  const trainingList = summaryReport.experienceAndTraining || (profile.experience || []).map(e => ({
-    title: e.role,
-    organization: e.company,
-    details: [e.description || 'Hands-on practical development'],
-    conceptsLearned: e.conceptsLearned || [],
-    interviewOneLiner: `Completed ${e.role} at ${e.company}.`
-  }));
+  // Real Internships & Experience (Only if candidate completed internship!)
+  const internshipsList = (summaryReport.experienceAndTraining && summaryReport.experienceAndTraining.length > 0)
+    ? summaryReport.experienceAndTraining
+    : (profile.experience || []).filter(e => e.role || e.company);
 
-  const likelyQuestions = summaryReport.likelyInterviewQuestions || profile.likelyInterviewQuestions || [];
-  const achievements = summaryReport.achievements || profile.achievements || [];
-  const certifications = summaryReport.certifications || profile.certifications || [];
-  const educationList = summaryReport.education || profile.education || [];
-  const areasOfInterest = summaryReport.areasOfInterest || profile.areasOfInterest || [];
+  const hasCompletedInternship = internshipsList.length > 0;
 
-  const hasEducation = educationList.length > 0;
-  const hasAchievements = achievements.length > 0;
+  // Real Certifications
+  const certifications = summaryReport.certifications?.length > 0 
+    ? summaryReport.certifications 
+    : (profile.certifications || []);
   const hasCertifications = certifications.length > 0;
-  const hasAreasOfInterest = areasOfInterest.length > 0;
-  const hasAdditionalSection = hasEducation || hasAchievements || hasCertifications || hasAreasOfInterest;
-  const profSummaryText = summaryReport.professionalSummary || profile.summary;
 
+  // Real Achievements
+  const achievements = summaryReport.achievements?.length > 0 
+    ? summaryReport.achievements 
+    : (profile.achievements || []);
+  const hasAchievements = achievements.length > 0;
+
+  // Real Areas of Interest
+  const areasOfInterest = summaryReport.areasOfInterest?.length > 0 
+    ? summaryReport.areasOfInterest 
+    : (profile.areasOfInterest || []);
+  const hasAreasOfInterest = areasOfInterest.length > 0;
+
+  // Real Likely Interview Questions
+  const likelyQuestions = summaryReport.likelyInterviewQuestions || profile.likelyInterviewQuestions || [];
+
+  const profSummaryText = summaryReport.professionalSummary || profile.summary;
   const currentAvatar = avatarPreview || user?.avatarUrl;
 
   return (
@@ -259,7 +260,7 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                 Delete Uploaded Resume?
               </h3>
               <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
-                This will remove your parsed skills, summary report, and structured candidate profile. You can upload a new PDF resume anytime.
+                This will remove your parsed skills, real project details, and structured profile. You can upload a new PDF resume anytime.
               </p>
             </div>
             <div className="flex gap-3 pt-2">
@@ -331,7 +332,7 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                   {displayName}
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-brand-purple-light dark:bg-dark-purple/20 text-brand-purple dark:text-dark-purple text-xs font-semibold">
-                  Active Profile
+                  {profile.targetRole || 'Full Stack Developer'}
                 </span>
               </div>
               
@@ -341,7 +342,7 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                 </p>
               )}
 
-              {/* User Links / Hyperlinks Bar */}
+              {/* Real Hyperlinks Bar (Only shown if links actually exist in resume) */}
               {(githubLink || linkedinLink || portfolioLink || leetcodeLink) && (
                 <div className="flex flex-wrap items-center gap-2 pt-1.5">
                   {githubLink && (
@@ -405,32 +406,21 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons: Clean & Internal Only */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               onClick={handleReanalyzeResume}
               disabled={reanalyzing}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white hover:opacity-90 text-xs font-bold shadow-purple-glow transition-all disabled:opacity-50"
-              title="Re-run AI analysis and regenerate summary report"
+              title="Re-run AI extraction directly from resume text"
             >
               <RefreshCw size={13} className={reanalyzing ? 'animate-spin' : ''} />
               <span>{reanalyzing ? 'Analyzing Resume...' : 'Re-Analyze with AI'}</span>
             </button>
 
-            <a
-              href="https://resume-analyzer-eight-sigma.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-surface dark:bg-dark-bg border border-brand-border dark:border-dark-border text-brand-charcoal dark:text-dark-text hover:border-brand-purple text-xs font-semibold transition-all shadow-sm"
-              title="Open External Resume Analyzer Tool"
-            >
-              <ExternalLink size={13} />
-              <span>Analyzer Tool</span>
-            </a>
-
             <button
               onClick={onReplaceResume}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-brand-border dark:border-dark-border text-brand-charcoal dark:text-dark-text hover:border-brand-purple hover:bg-brand-surface dark:hover:bg-dark-bg text-xs font-semibold transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-brand-border dark:border-dark-border text-brand-charcoal dark:text-dark-text hover:border-brand-purple hover:bg-brand-surface dark:hover:bg-dark-bg text-xs font-semibold transition-all shadow-sm"
             >
               <UploadCloud size={13} />
               <span>Replace Resume</span>
@@ -444,42 +434,44 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
               <Trash2 size={13} />
             </button>
           </div>
-        </div>        {/* Extracted Skills Badges (Neat Grid) */}
+        </div>
+
+        {/* 3. Languages, Tech Stacks & Tools Grid (Strictly Deduplicated) */}
         {categorizedSkills.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-bold text-brand-charcoal dark:text-dark-text font-outfit">
                 <Code size={18} className="text-brand-purple dark:text-dark-purple" />
-                <span>Extracted Technical Skills & Proficiencies ({totalSkillsCount})</span>
+                <span>Languages, Tech Stacks & Tools ({totalSkillsCount})</span>
               </div>
               <span className="text-xs text-brand-slate dark:text-dark-muted font-medium">
-                Extracted from resume
+                Extracted purely from resume • Zero duplicates
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {categorizedSkills.map((cat, idx) => (
                 <div
                   key={idx}
-                  className="p-3.5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2 hover:border-brand-purple/40 transition-colors"
+                  className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2 hover:border-brand-purple/40 transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs font-semibold">
                     <div className="flex items-center gap-1.5">
-                      <cat.icon size={13} className={cat.iconColor} />
+                      <cat.icon size={14} className={cat.iconColor} />
                       <span className="text-brand-charcoal dark:text-dark-text font-bold text-[11px] uppercase tracking-wider">
                         {cat.name}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-border/40 dark:bg-dark-border/60 text-brand-slate dark:text-dark-muted">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-border/40 dark:bg-dark-border/60 text-brand-slate dark:text-dark-muted">
                       {cat.skills.length}
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <div className="flex flex-wrap gap-1.5 pt-1">
                     {cat.skills.map((skill, sIdx) => (
                       <span
                         key={sIdx}
-                        className={`px-2 py-0.5 rounded-lg border text-xs font-medium transition-colors ${cat.badgeClass}`}
+                        className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${cat.badgeClass}`}
                       >
                         {skill}
                       </span>
@@ -493,36 +485,35 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
 
       </div>
 
-      {/* AI Resume Summarization & Analysis Report - Landing Page Style */}
+      {/* Main Details Section */}
       <div className="space-y-8">
 
-        {/* Section 1: Professional Summary */}
-        {profSummaryText && (
-          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border dark:border-dark-border pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-brand-purple/10 dark:bg-dark-purple/20 text-brand-purple dark:text-dark-purple flex items-center justify-center font-bold text-sm">
-                  <Sparkles size={16} />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                    <Sparkles size={18} className="text-brand-purple" />
-                    <span>Professional Summary</span>
-                  </h3>
-                  <p className="text-xs text-brand-slate dark:text-dark-muted">
-                    Key overview and career background extracted from your resume.
-                  </p>
-                </div>
+        {/* 2. Professional Summary & Highlighted CGPA / Percentage */}
+        <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border dark:border-dark-border pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-purple/10 dark:bg-dark-purple/20 text-brand-purple dark:text-dark-purple flex items-center justify-center font-bold text-sm">
+                <Sparkles size={16} />
               </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
+                  <span>Professional Summary & Highlights</span>
+                </h3>
+                <p className="text-xs text-brand-slate dark:text-dark-muted">
+                  Career profile and highlighted academic score extracted from your resume
+                </p>
+              </div>
+            </div>
 
+            {profSummaryText && (
               <button
                 onClick={handleCopyPitch}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-brand-border dark:border-dark-border text-xs font-semibold text-brand-charcoal dark:text-dark-text hover:bg-brand-surface dark:hover:bg-dark-bg hover:border-brand-purple transition-all shadow-xs shrink-0 self-start sm:self-auto"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-border dark:border-dark-border text-xs font-semibold text-brand-charcoal dark:text-dark-text hover:bg-brand-surface dark:hover:bg-dark-bg hover:border-brand-purple transition-all shadow-xs shrink-0 self-start sm:self-auto"
               >
                 {copiedPitch ? (
                   <>
                     <CheckCheck size={14} className="text-emerald-500" />
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied to Clipboard!</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
                   </>
                 ) : (
                   <>
@@ -531,17 +522,49 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                   </>
                 )}
               </button>
-            </div>
+            )}
+          </div>
 
+          {/* Highlighted CGPA / Academic Score Banner */}
+          {highlightedScore && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-brand-purple/10 border border-amber-500/30 dark:border-amber-400/30 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-sm shadow-md shrink-0">
+                  <GraduationCap size={20} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 block">
+                    Highlighted Academic Score / CGPA
+                  </span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg sm:text-xl font-black text-brand-charcoal dark:text-dark-text font-outfit text-amber-600 dark:text-amber-400">
+                      {highlightedScore}
+                    </span>
+                    {primaryEdu && (
+                      <span className="text-xs text-brand-slate dark:text-dark-muted font-medium">
+                        • {primaryEdu.degree} ({primaryEdu.institution}{primaryEdu.year ? `, ${primaryEdu.year}` : ''})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold self-start sm:self-auto">
+                Verified from Resume
+              </span>
+            </div>
+          )}
+
+          {/* Summary Text */}
+          {profSummaryText && (
             <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-brand-purple/5 via-brand-blue/5 to-brand-cyan/5 border border-brand-purple/20 dark:border-dark-purple/30">
               <p className="text-sm sm:text-base text-brand-charcoal dark:text-dark-text leading-relaxed font-medium">
                 "{profSummaryText}"
               </p>
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
-        {/* Section 2: Projects & Architecture Breakdown */}
+        {/* 4. Projects Completed Section (Count, Title with Descriptions) */}
         {projectsList.length > 0 && (
           <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
             <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
@@ -551,11 +574,10 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                    <Layers size={18} className="text-brand-blue" />
-                    <span>Projects & Architecture Deep Dive ({projectsList.length})</span>
+                    <span>Projects Completed ({projectsList.length})</span>
                   </h3>
                   <p className="text-xs text-brand-slate dark:text-dark-muted">
-                    Technical architecture, features, and key algorithms implemented in your projects
+                    Exact projects, descriptions, and technical stacks extracted from your resume
                   </p>
                 </div>
               </div>
@@ -570,7 +592,9 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                   <div className="space-y-2.5">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-[10px] font-bold text-brand-purple uppercase tracking-wider">Project {idx + 1}</span>
+                        <span className="text-[10px] font-bold text-brand-purple uppercase tracking-wider">
+                          Project {idx + 1}
+                        </span>
                         <h4 className="text-sm sm:text-base font-bold text-brand-charcoal dark:text-dark-text leading-snug">
                           {proj.title || proj.name}
                         </h4>
@@ -586,7 +610,9 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                     {/* Tech Stack */}
                     {(proj.techStack || proj.technologies || []).length > 0 && (
                       <div>
-                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Tech Stack:</span>
+                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">
+                          Technologies Used:
+                        </span>
                         <div className="flex flex-wrap gap-1">
                           {(proj.techStack || proj.technologies).map((t, ti) => (
                             <span
@@ -600,41 +626,46 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                       </div>
                     )}
 
-                    {/* Advanced Concepts */}
-                    {(proj.advancedConcepts || []).length > 0 && (
-                      <div>
-                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Advanced Concepts Used:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {proj.advancedConcepts.map((c, ci) => (
-                            <span
-                              key={ci}
-                              className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-semibold"
-                            >
-                              {c}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Features */}
+                    {/* Features / Highlights */}
                     {(proj.features || proj.highlights || []).length > 0 && (
                       <div>
-                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Features:</span>
+                        <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">
+                          Key Features:
+                        </span>
                         <ul className="space-y-0.5 text-[11px] text-brand-slate dark:text-dark-muted list-disc list-inside">
                           {(proj.features || proj.highlights).slice(0, 3).map((f, fi) => (
-                            <li key={fi} className="line-clamp-1">{f}</li>
+                            <li key={fi} className="line-clamp-2">{f}</li>
                           ))}
                         </ul>
                       </div>
                     )}
                   </div>
 
-                  {/* Interview One-Liner */}
-                  {proj.interviewOneLiner && (
-                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-xs mt-2">
-                      <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block mb-0.5">💬 Interview One-Liner:</span>
-                      <p className="text-[11px] text-emerald-900 dark:text-emerald-200 font-medium">"{proj.interviewOneLiner}"</p>
+                  {/* Project Links if available in resume */}
+                  {(proj.githubUrl || proj.liveUrl) && (
+                    <div className="flex gap-2 pt-2 border-t border-brand-border/40">
+                      {proj.githubUrl && (
+                        <a
+                          href={proj.githubUrl.startsWith('http') ? proj.githubUrl : `https://${proj.githubUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-brand-purple font-semibold hover:underline"
+                        >
+                          <Github size={11} />
+                          <span>Code</span>
+                        </a>
+                      )}
+                      {proj.liveUrl && (
+                        <a
+                          href={proj.liveUrl.startsWith('http') ? proj.liveUrl : `https://${proj.liveUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-semibold hover:underline"
+                        >
+                          <Globe size={11} />
+                          <span>Live Demo</span>
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>
@@ -643,8 +674,8 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
           </section>
         )}
 
-        {/* Section 3: Industrial Training & Work Experience */}
-        {trainingList.length > 0 && (
+        {/* 5. Completed Internship & Industrial Experience (ONLY shown if candidate completed internship!) */}
+        {hasCompletedInternship && (
           <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
             <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
               <div className="flex items-center gap-2.5">
@@ -653,18 +684,17 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                    <Briefcase size={18} className="text-brand-cyan" />
-                    <span>Industrial Training & Work Experience ({trainingList.length})</span>
+                    <span>Internship & Practical Experience ({internshipsList.length})</span>
                   </h3>
                   <p className="text-xs text-brand-slate dark:text-dark-muted">
-                    Corporate internships, industrial programs, and domain knowledge
+                    Completed internships, organizations, and verified hands-on work history
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4 pt-1">
-              {trainingList.map((tr, idx) => (
+              {internshipsList.map((tr, idx) => (
                 <div
                   key={idx}
                   className="p-5 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-3"
@@ -672,49 +702,31 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-brand-charcoal dark:text-dark-text">
-                        {tr.title}
+                        {tr.title || tr.role}
                       </h4>
                       <p className="text-xs font-semibold text-brand-purple dark:text-dark-purple">
-                        {tr.organization}
+                        {tr.organization || tr.company}
                       </p>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 text-[10px] font-bold self-start">
-                      Industrial Training
-                    </span>
+                    {tr.duration && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 text-[10px] font-bold self-start">
+                        {tr.duration}
+                      </span>
+                    )}
                   </div>
 
+                  {tr.description && (
+                    <p className="text-xs text-brand-slate dark:text-dark-muted leading-relaxed">
+                      {tr.description}
+                    </p>
+                  )}
+
                   {(tr.details || []).length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">What You Did:</span>
-                      <ul className="space-y-1 text-xs text-brand-slate dark:text-dark-muted list-disc list-inside">
-                        {tr.details.map((d, di) => (
-                          <li key={di}>{d}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {(tr.conceptsLearned || []).length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-bold text-brand-slate dark:text-dark-muted block mb-1">Concepts Mastered:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {tr.conceptsLearned.map((c, ci) => (
-                          <span
-                            key={ci}
-                            className="px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-[10px] font-semibold"
-                          >
-                            {c}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {tr.interviewOneLiner && (
-                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-xs">
-                      <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block mb-0.5">💬 Interview One-Liner:</span>
-                      <p className="text-[11px] text-emerald-900 dark:text-emerald-200 font-medium">"{tr.interviewOneLiner}"</p>
-                    </div>
+                    <ul className="space-y-1 text-xs text-brand-slate dark:text-dark-muted list-disc list-inside">
+                      {tr.details.map((d, di) => (
+                        <li key={di}>{d}</li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               ))}
@@ -722,7 +734,88 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
           </section>
         )}
 
-        {/* Section 4: Most Likely Interview Questions */}
+        {/* 6. Certifications, Achievements & Areas of Interest (ONLY shown if present in resume!) */}
+        {(hasCertifications || hasAchievements || hasAreasOfInterest) && (
+          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
+                  <Award size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
+                    <span>Credentials, Achievements & Areas of Interest</span>
+                  </h3>
+                  <p className="text-xs text-brand-slate dark:text-dark-muted">
+                    Verified qualifications and specializations extracted from your resume
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+              
+              {/* Certifications (Only if completed) */}
+              {hasCertifications && (
+                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
+                    <FileCheck size={15} className="text-emerald-500" />
+                    <span>Certifications ({certifications.length})</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {certifications.map((cert, ci) => (
+                      <div key={ci} className="flex items-start gap-2 p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
+                        <CheckCircle2 size={13} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <span>{cert}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Achievements (Only if completed) */}
+              {hasAchievements && (
+                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
+                    <Award size={15} className="text-amber-500" />
+                    <span>Achievements ({achievements.length})</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {achievements.map((ach, ai) => (
+                      <div key={ai} className="flex items-start gap-2 p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
+                        <Award size={13} className="text-amber-500 shrink-0 mt-0.5" />
+                        <span>{ach}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Areas of Interest (Only if present in resume) */}
+              {hasAreasOfInterest && (
+                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
+                    <Compass size={15} className="text-blue-500" />
+                    <span>Areas of Interest ({areasOfInterest.length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {areasOfInterest.map((aoi, aii) => (
+                      <span
+                        key={aii}
+                        className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium"
+                      >
+                        {aoi}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </section>
+        )}
+
+        {/* Dynamic Interview Questions Tailored to Resume */}
         {likelyQuestions.length > 0 && (
           <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
             <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
@@ -733,10 +826,10 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
                     <HelpCircle size={18} className="text-amber-500" />
-                    <span>Most Likely Interview Questions From Your Resume</span>
+                    <span>Dynamic Interview Questions From Your Resume</span>
                   </h3>
                   <p className="text-xs text-brand-slate dark:text-dark-muted">
-                    The AI generates dynamic interview questions targeting these exact topics and project concepts
+                    Questions generated strictly targeting your real projects and technical stacks
                   </p>
                 </div>
               </div>
@@ -769,109 +862,19 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
           </section>
         )}
 
-        {/* Section 5: Education, Certifications, Achievements & Areas of Interest */}
-        {hasAdditionalSection && (
-          <section className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 space-y-4">
-            <div className="flex items-center justify-between border-b border-brand-border dark:border-dark-border pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
-                  <GraduationCap size={16} />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-brand-charcoal dark:text-dark-text font-outfit flex items-center gap-2">
-                    <GraduationCap size={18} className="text-emerald-500" />
-                    <span>Education, Certifications, Achievements & Areas of Interest</span>
-                  </h3>
-                  <p className="text-xs text-brand-slate dark:text-dark-muted">
-                    Academic qualifications, verified credentials, and specialized engineering tracks
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-1">
-              
-              {/* Education */}
-              {hasEducation && (
-                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                    <GraduationCap size={15} className="text-brand-purple" />
-                    <span>Education</span>
-                  </div>
-                  <div className="space-y-2">
-                    {educationList.map((ed, ei) => (
-                      <div key={ei} className="text-xs pb-1 border-b border-brand-border/40 last:border-0 last:pb-0">
-                        <p className="font-bold text-brand-charcoal dark:text-dark-text">{ed.degree}</p>
-                        <p className="text-[11px] text-brand-slate dark:text-dark-muted">{ed.institution}</p>
-                        <div className="flex gap-2 text-[10px] text-brand-purple font-semibold mt-0.5">
-                          <span>{ed.year}</span>
-                          {ed.score && <span>• {ed.score}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Achievements */}
-              {hasAchievements && (
-                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                    <Award size={15} className="text-amber-500" />
-                    <span>Achievements</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {achievements.map((ach, ai) => (
-                      <div key={ai} className="p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
-                        {ach}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Certifications */}
-              {hasCertifications && (
-                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                    <FileCheck size={15} className="text-emerald-500" />
-                    <span>Certifications</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {certifications.map((cert, ci) => (
-                      <div key={ci} className="p-2.5 rounded-xl bg-white dark:bg-dark-card border border-brand-border/60 text-xs font-medium text-brand-charcoal dark:text-dark-text">
-                        {cert}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Areas of Interest */}
-              {hasAreasOfInterest && (
-                <div className="p-4 rounded-2xl bg-brand-surface/60 dark:bg-dark-bg/60 border border-brand-border dark:border-dark-border space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-charcoal dark:text-dark-text">
-                    <Compass size={15} className="text-blue-500" />
-                    <span>Areas of Interest</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {areasOfInterest.map((aoi, aii) => (
-                      <span
-                        key={aii}
-                        className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-semibold"
-                      >
-                        {aoi}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </section>
-        )}
-
       </div>
+
+      {/* Full screen Analyzing Card with Payment-Done symbol on completion */}
+      {(reanalyzing || reanalyzeComplete) && (
+        <ResumeAnalyzingCard
+          isAnalyzing={reanalyzing}
+          isComplete={reanalyzeComplete}
+          onComplete={() => {
+            setReanalyzeComplete(false);
+            if (onProfileUpdated) onProfileUpdated();
+          }}
+        />
+      )}
 
     </div>
   );

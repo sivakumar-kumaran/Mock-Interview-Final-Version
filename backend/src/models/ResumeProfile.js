@@ -27,7 +27,8 @@ const resumeProfileSchema = new mongoose.Schema({
     linkedin: { type: String, default: '' },
     github: { type: String, default: '' },
     portfolio: { type: String, default: '' },
-    leetcode: { type: String, default: '' }
+    leetcode: { type: String, default: '' },
+    cgpaOrPercentage: { type: String, default: '' }
   },
   targetRole: {
     type: String,
@@ -85,6 +86,7 @@ const resumeProfileSchema = new mongoose.Schema({
   ],
   summaryReport: {
     professionalSummary: { type: String, default: '' },
+    cgpaOrPercentage: { type: String, default: '' },
     technicalSkills: {
       languages: [{ type: String }],
       coreCS: [{ type: String }],

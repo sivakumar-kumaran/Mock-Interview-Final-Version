@@ -1,4 +1,8 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const vm = require('vm');
+const { SQL_QUESTIONS, PROGRAMMING_QUESTIONS } = require('../data/codingQuestions');
+
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest'];
 
 const getGenAI = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -7,6 +11,29 @@ const getGenAI = () => {
   }
   return null;
 };
+
+/**
+ * Robust helper: Calls Gemini with multi-model fallback and automated JSON markdown stripping
+ */
+async function generateGeminiContentWithFallback(genAI, prompt) {
+  let lastError = null;
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      let text = response.text().trim();
+      if (text.startsWith('```')) {
+        text = text.replace(/^```json\s*/i, '').replace(/^```\w*\s*/i, '').replace(/```$/, '').trim();
+      }
+      return JSON.parse(text);
+    } catch (err) {
+      lastError = err;
+      console.warn(`[GeminiService] Model ${modelName} failed, trying next fallback: ${err.message}`);
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Evaluates an individual response to a question
@@ -21,18 +48,16 @@ const evaluateResponse = async (question, answer, difficulty) => {
       confidence: 0,
       clarity: 0,
       completeness: 0,
-      feedback: 'No answer was provided for this question.'
+      feedback: 'No answer was provided for this question. Try to explain key concepts or state your approach.'
     };
   }
 
   const genAI = getGenAI();
   if (!genAI) {
-    console.log('Gemini API key not configured or invalid. Using simulated evaluation.');
     return getMockIndividualEvaluation(question, answer, difficulty);
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const prompt = `You are an expert technical and HR interviewer.
 Evaluate the candidate's answer for the following question:
 Question: "${question}"
@@ -44,26 +69,17 @@ Do NOT output any markdown tags (like \`\`\`json) or extra text. Output ONLY a v
 
 The output JSON structure MUST be:
 {
-  "score": <integer>,
-  "technicalAccuracy": <integer>,
-  "keywordCoverage": <integer>,
-  "communication": <integer>,
-  "confidence": <integer>,
-  "clarity": <integer>,
-  "completeness": <integer>,
-  "feedback": "<string summary of strengths, weaknesses and what they missed>"
+  "score": <integer 0-100>,
+  "technicalAccuracy": <integer 0-100>,
+  "keywordCoverage": <integer 0-100>,
+  "communication": <integer 0-100>,
+  "confidence": <integer 0-100>,
+  "clarity": <integer 0-100>,
+  "completeness": <integer 0-100>,
+  "feedback": "<concise summary of strengths, weaknesses and what they missed>"
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text().trim();
-    
-    // Clean potential markdown backticks returned by Gemini
-    if (text.startsWith('```')) {
-      text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-    }
-
-    return JSON.parse(text);
+    return await generateGeminiContentWithFallback(genAI, prompt);
   } catch (error) {
     console.error('Error calling Gemini API for individual evaluation:', error);
     return getMockIndividualEvaluation(question, answer, difficulty);
@@ -73,14 +89,15 @@ The output JSON structure MUST be:
 const evaluateOverallInterview = async (responsesList) => {
   const genAI = getGenAI();
   if (!genAI) {
-    console.log('Gemini API key not configured or invalid. Using simulated overall evaluation.');
     return getMockOverallEvaluation(responsesList);
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const responsesSummary = responsesList.map((r, i) => {
-      return `Q${i+1}: ${r.question}\nAnswer: ${r.answer}\nScore: ${r.evaluation.score}/100\nFeedback: ${r.evaluation.feedback}`;
+      const type = (r.responseType === 'coding' || r.type === 'coding')
+        ? `[Code Submission in ${r.language || 'Code'}]\n${r.code || r.answer}`
+        : `Answer: ${r.answer}`;
+      return `Q${i+1}: ${r.question}\n${type}\nScore: ${r.evaluation?.score || 0}/100\nFeedback: ${r.evaluation?.feedback || ''}`;
     }).join('\n\n');
 
     const prompt = `You are a career coach reviewing a candidate's completed mock interview. Here are the questions they answered and their evaluations:
@@ -97,16 +114,7 @@ The output JSON structure MUST be:
   "suggestions": ["<suggestion 1>", "<suggestion 2>"]
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text().trim();
-
-    // Clean potential markdown backticks returned by Gemini
-    if (text.startsWith('```')) {
-      text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-    }
-
-    return JSON.parse(text);
+    return await generateGeminiContentWithFallback(genAI, prompt);
   } catch (error) {
     console.error('Error calling Gemini API for overall evaluation:', error);
     return getMockOverallEvaluation(responsesList);
@@ -116,35 +124,33 @@ The output JSON structure MUST be:
 // --- SIMULATED MOCK EVALUATION HELPERS ---
 
 function getMockIndividualEvaluation(question, answer, difficulty) {
-  // Simple heuristic scores based on answer length and keyword matches
   const answerLength = answer.length;
-  const wordCount = answer.split(/\s+/).length;
+  const wordCount = answer.split(/\s+/).filter(Boolean).length;
 
-  let technicalAccuracy = Math.min(45 + Math.floor(wordCount / 2), 90);
-  let communication = Math.min(50 + Math.floor(answerLength / 10), 92);
-  let confidence = Math.min(55 + Math.floor(wordCount / 3), 88);
-  let clarity = Math.min(50 + Math.floor(wordCount / 2.5), 90);
-  let completeness = Math.min(40 + Math.floor(wordCount / 2), 85);
-  let keywordCoverage = Math.min(40 + Math.floor(wordCount / 3), 85);
+  let technicalAccuracy = Math.min(50 + Math.floor(wordCount / 2), 92);
+  let communication = Math.min(55 + Math.floor(answerLength / 12), 90);
+  let confidence = Math.min(60 + Math.floor(wordCount / 3), 88);
+  let clarity = Math.min(55 + Math.floor(wordCount / 2.5), 90);
+  let completeness = Math.min(45 + Math.floor(wordCount / 2), 85);
+  let keywordCoverage = Math.min(45 + Math.floor(wordCount / 3), 85);
 
-  // Adjust scores slightly based on difficulty
   if (difficulty === 'Advanced') {
-    technicalAccuracy = Math.max(technicalAccuracy - 10, 30);
-    completeness = Math.max(completeness - 10, 30);
+    technicalAccuracy = Math.max(technicalAccuracy - 8, 35);
+    completeness = Math.max(completeness - 8, 35);
   } else if (difficulty === 'Beginner') {
-    technicalAccuracy = Math.min(technicalAccuracy + 10, 95);
-    completeness = Math.min(completeness + 10, 95);
+    technicalAccuracy = Math.min(technicalAccuracy + 8, 95);
+    completeness = Math.min(completeness + 8, 95);
   }
 
   const score = Math.round(
     (technicalAccuracy + communication + confidence + clarity + completeness + keywordCoverage) / 6
   );
 
-  let feedback = 'Good effort on the response. ';
+  let feedback = 'Good effort on your response. ';
   if (wordCount < 15) {
-    feedback += 'However, the answer is too brief. Try to elaborate on technical concepts and provide real-world examples.';
+    feedback += 'However, your answer is brief. Try to elaborate on technical architecture and edge cases.';
   } else {
-    feedback += 'Your explanation touches on important elements of the topic. To improve, ensure you cover key terminology and mention structural details or framework components related to the question.';
+    feedback += 'Your explanation touches on important elements. Continue to practice quantitative trade-offs and structural terminology.';
   }
 
   return {
@@ -160,266 +166,128 @@ function getMockIndividualEvaluation(question, answer, difficulty) {
 }
 
 function getMockOverallEvaluation(responsesList) {
-  const avgScore = Math.round(
-    responsesList.reduce((acc, curr) => acc + curr.evaluation.score, 0) / responsesList.length
-  );
-
-  let strengths = [
-    'Shows basic understanding of the requested subjects.',
-    'Expresses technical answers with clear structures.'
-  ];
-  let weaknesses = [
-    'Lacks depth in advanced concepts.',
-    'Answers could be enriched with specific code-level or design examples.'
-  ];
-  let suggestions = [
-    'Practice explaining concepts using standard definitions.',
-    'Formulate answers using the STAR method (Situation, Task, Action, Result) for better coherence.'
-  ];
-
-  if (avgScore >= 80) {
-    strengths.push('Excellent articulation and command over the terminology.');
-    suggestions.push('Review edge cases and performance trade-offs for high-level concepts.');
-  } else {
-    weaknesses.push('Struggles with question completeness on complex items.');
-    suggestions.push('Focus on core definitions and practice speaking answers aloud.');
-  }
+  const avg = responsesList.length > 0
+    ? Math.round(responsesList.reduce((acc, curr) => acc + (curr.evaluation?.score || 0), 0) / responsesList.length)
+    : 70;
 
   return {
-    summary: `You completed the mock interview with an average score of ${avgScore}%. You demonstrated consistent knowledge, though there is room for improvement in technical precision.`,
-    strengths,
-    weaknesses,
-    suggestions
+    summary: `Candidate demonstrated solid core competency across the interview topics, scoring an average of ${avg}%. Communications were clear and answers addressed key fundamentals.`,
+    strengths: [
+      'Structured thinking and clear explanations for foundational concepts.',
+      'Maintained consistent professional composure throughout the interview.',
+      'Showcased good problem breakdown skills.'
+    ],
+    weaknesses: [
+      'Could provide more depth on system scaling and boundary conditions.',
+      'Elaborate more on trade-offs between alternative architectural choices.'
+    ],
+    suggestions: [
+      'Use the STAR method for behavioral and scenario-based responses.',
+      'Include quantitative metrics when discussing project outcomes or performance.'
+    ]
   };
 }
 
-const chatWithAI = async (message, history = []) => {
+const chatWithAI = async (message, context = {}) => {
   const genAI = getGenAI();
   if (!genAI) {
-    console.log('Gemini API key not configured. Using simulated chatbot responses.');
-    return "Hi! I am your AI Interview Coach. It looks like the Gemini API Key is not configured in the backend environment, but I am still here to help! Feel free to ask me any general questions about technical concepts, resume building, or interview strategy.";
+    return getSimulatedChatResponse(message);
   }
+
   try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash-lite',
-      systemInstruction: "You are Antigravity AI Coach, a supportive, expert career coach and technical/HR interviewer. Help candidates prepare for interviews, explain programming concepts, structure their responses (using STAR method), and keep your answers brief, encouraging, and clear."
-    });
-    const chat = model.startChat({
-      history: history.map(h => ({
-        role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: h.text }]
-      }))
-    });
-    const result = await chat.sendMessage(message);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const prompt = `You are a helpful, encouraging AI Interview Coach assistant named Antigravity Coach.
+User message: "${message}"
+Context: Topic = ${context.topic || 'General Tech Interview'}, Difficulty = ${context.difficulty || 'Intermediate'}.
+Provide a brief, helpful answer (2-4 sentences max). Give concise advice or guidance.`;
+
+    const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
+    return response.text().trim();
   } catch (error) {
-    console.error('Error in chatWithAI:', error);
-    // Graceful fallback to smart simulated technical coach response if API key has quota or rate limits
-    return getMockChatResponse(message);
+    console.error('Error with chat AI:', error);
+    return getSimulatedChatResponse(message);
   }
 };
 
-const getMockChatResponse = (message) => {
+const getSimulatedChatResponse = (message) => {
   const msg = message.toLowerCase();
-  if (msg.includes('hello') || msg.includes('hi ') || msg === 'hi' || msg.includes('hey')) {
-    return "Hello! I am your AI Career Coach. How can I help you prepare for your technical or HR interview today?";
-  }
-  if (msg.includes('react')) {
-    return "React is a popular frontend library. In interviews, expect questions on virtual DOM, Hooks (useState, useEffect, useMemo), state management (Context, Redux), and component lifecycle. Make sure you practice structuring your answers using the STAR method!";
-  }
-  if (msg.includes('javascript') || msg.includes('js')) {
-    return "JavaScript interviews often focus on core concepts: Closures, Event Loop, Promises & Async/Await, Prototypal Inheritance, and scope (var, let, const). I suggest practicing coding challenges on arrays, objects, and asynchronous patterns.";
-  }
-  if (msg.includes('java')) {
-    return "Java technical interviews commonly cover OOP principles (Inheritance, Polymorphism, Encapsulation, Abstraction), Collection Framework (HashMap, ArrayList), Multithreading, JVM architecture, and Java 8 features like Streams and Lambda expressions.";
-  }
-  if (msg.includes('resume') || msg.includes('cv')) {
-    return "For resumes, focus on listing impactful bullet points with the format: 'Accomplished [X], as measured by [Y], by doing [Z]'. Keep it to one page, highlight key tech stacks, and list relevant mock assessment scores from this platform!";
-  }
   if (msg.includes('star') || msg.includes('method')) {
-    return "The STAR method is: Situation (describe context), Task (explain your responsibility), Action (what you did), and Result (outcomes, metrics). Use this structure for HR and behavioral questions to sound highly structured.";
+    return "The STAR method is: Situation (context), Task (responsibility), Action (what you did), and Result (outcomes). Use this structure for behavioral questions to sound structured.";
   }
-  if (msg.includes('integrity') || msg.includes('violation') || msg.includes('rule')) {
-    return "Our AI Simulator tracks proctoring guidelines like full-screen locks and tab switches. Exiting fullscreen or changing tabs logs a violation. Try to stay focused on the interview window to pass!";
+  if (msg.includes('integrity') || msg.includes('violation')) {
+    return "Our proctoring tracks full-screen and tab focus. Stay on the interview window to pass without flags!";
   }
-  return "That is a great question. In interviews, it is crucial to explain your thought process clearly, define core technical terms, list edge cases, and present structured examples. Let me know if you would like me to explain a specific topic like JavaScript, React, Java, or behavioral strategies!";
+  return "In interviews, clearly define core concepts, state edge cases, and present structured examples. Practice explaining trade-offs!";
 };
 
 /**
- * Generates dynamic, multi-stage interview questions tailored strictly to the user's uploaded resume summarization
+ * Generates dynamic 6-stage interview questions:
+ * - Stage 1 (Verbal): Primary Resume Project Architecture
+ * - Stage 2 (Verbal): Core Technical Concept Deep-Dive
+ * - Stage 3 (Coding): 1 Compulsory SQL Challenge (Selected from the 10 Standard SQL Questions)
+ * - Stage 4 (Coding): 1 Algorithmic Coding Challenge (Selected from the 10 LeetCode-style Questions)
+ * - Stage 5 (Verbal): Industrial Training / Secondary Project System Flow
+ * - Stage 6 (Verbal): Behavioral / Engineering Leadership
  */
 const generateResumeInterviewQuestions = async (profile, difficulty = 'Intermediate') => {
   const summaryReport = profile.summaryReport || {};
   const projects = summaryReport.projects || profile.projects || [];
   const training = summaryReport.experienceAndTraining || profile.experience || [];
   const likelyQ = summaryReport.likelyInterviewQuestions || profile.likelyInterviewQuestions || [];
-  const techSkills = (summaryReport.technicalSkills?.languages || profile.skills?.technical || ['Java', 'JavaScript', 'Python']).join(', ');
-  const frameworks = (summaryReport.technicalSkills?.backend || profile.skills?.frameworks || ['React', 'Node.js', 'FastAPI']).join(', ');
-  const databases = (summaryReport.technicalSkills?.databases || profile.skills?.databases || ['MySQL', 'MongoDB']).join(', ');
-  const primarySkill = (summaryReport.technicalSkills?.languages?.[0] || profile.skills?.technical?.[0] || 'Java').toLowerCase();
+  const primarySkill = (summaryReport.technicalSkills?.languages?.[0] || profile.skills?.technical?.[0] || 'JavaScript').toLowerCase();
   const codingLang = primarySkill.includes('python') ? 'python' : (primarySkill.includes('java') ? 'java' : 'javascript');
 
-  const projectsContext = projects.map((p, i) => {
-    const title = p.title || p.name || `Project ${i+1}`;
-    const desc = p.description || p.summary || '';
-    const stack = (p.techStack || p.technologies || []).join(', ');
-    const concepts = (p.advancedConcepts || p.highlights || []).join(', ');
-    return `Project ${i+1}: "${title}" | Stack: [${stack}] | Concepts: [${concepts}] | Overview: ${desc}`;
-  }).join('\n');
+  // Randomly select 1 SQL question from the 10 SQL questions
+  const sqlIndex = Math.floor(Math.random() * SQL_QUESTIONS.length);
+  const selectedSql = SQL_QUESTIONS[sqlIndex];
 
-  const trainingContext = training.map((t, i) => {
-    const title = t.title || t.role || `Experience ${i+1}`;
-    const org = t.organization || t.company || '';
-    const learned = (t.conceptsLearned || t.details || []).join(', ');
-    return `Training/Exp ${i+1}: "${title}" at "${org}" | Learned: [${learned}]`;
-  }).join('\n');
+  // Randomly select 1 Programming question from the 10 Programming questions
+  const progIndex = Math.floor(Math.random() * PROGRAMMING_QUESTIONS.length);
+  const selectedProg = PROGRAMMING_QUESTIONS[progIndex];
 
-  const likelyQuestionsContext = likelyQ.map(lq => {
-    return `${lq.category || 'Topic'}:\n` + (lq.questions || []).map(q => `- ${q}`).join('\n');
-  }).join('\n\n');
+  // Extract clean starter code for preferred language with placeholder
+  const progStarter = selectedProg.starterCode[codingLang] || selectedProg.starterCode.javascript;
+  const sqlStarter = selectedSql.starterCode.sql;
+
+  const p1 = projects[0]?.title || projects[0]?.name || 'Primary Project';
+  const p1Tech = (projects[0]?.techStack || projects[0]?.technologies || []).slice(0, 3).join(', ') || 'software architecture';
+  const p2 = projects[1]?.title || projects[1]?.name;
+  const p2Tech = (projects[1]?.techStack || projects[1]?.technologies || []).slice(0, 3).join(', ') || 'modern frameworks';
+
+  let stage1Question = `Walk me through the architecture of "${p1}". What key technical trade-offs did you make while building it with ${p1Tech}?`;
+  let stage2Question = p2
+    ? `In your "${p2}" project, how did you structure the backend and handle component integration using ${p2Tech}?`
+    : `In "${p1}", explain a complex technical bug or performance challenge you faced and how you diagnosed and debugged it.`;
+  let stage5Question = `During your training or project work, explain how you ensure data reliability and system scalability. What considerations do you take when designing REST APIs and database schemas?`;
+  let stage6Question = `Tell me about a situation in a team project where you faced tight deadlines or conflicting technical opinions. How did you resolve it?`;
 
   const genAI = getGenAI();
-  if (!genAI) {
-    return getMockResumeQuestions(profile, difficulty);
-  }
+  if (genAI) {
+    try {
+      const prompt = `You are a Senior Engineering Hiring Manager tailoring a 6-stage interview for a candidate.
+Candidate Target Role: ${profile.targetRole || 'Software Engineer'}
+Candidate Projects: ${projects.map(p => p.title || p.name).join(', ')}
+Candidate Skills: ${(profile.skills?.technical || []).join(', ')}
 
-  try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
-
-    const prompt = `You are an expert Technical Hiring Manager and Bar Raiser conducting a dynamic 30-35 minute interview tailored strictly to the candidate's resume analysis.
-
-Candidate Summary:
-- Target Role: ${profile.targetRole || 'Full Stack Developer'}
-- Professional Pitch: ${summaryReport.professionalSummary || profile.summary || ''}
-- Core Skills: ${techSkills}
-- Backend/Frameworks: ${frameworks}
-- Databases: ${databases}
-- Candidate Projects:
-${projectsContext || 'Full Stack Application'}
-- Industrial Training / Experience:
-${trainingContext || 'Document Processing and Search Systems'}
-
-High-Yield Question Suggestions from Resume:
-${likelyQuestionsContext}
-
-Candidate's Preferred Coding Language: ${codingLang}
-Interview Difficulty: ${difficulty}
-
-CRITICAL RULES:
-- DO NOT ASK GENERIC OR FIXED QUESTIONS.
-- Ask questions directly challenging the specific claims, architectural decisions, and concepts on their resume (e.g. if they built an AI Mock Interview with RAG/embeddings/vector search, ask how RAG and embeddings work; if they used Dijkstra's Algorithm in a Disaster Rescue system, ask why Dijkstra and time complexity; if they built a Railway system in Java/SQL, ask about OOP design and SQL concurrency; if they did Intel Unnati training, ask about PDF extraction and semantic vs keyword search).
-
-Generate exactly 6 multi-stage interview questions:
-1. Stage 1 (Category: "intro", Type: "verbal", Time: 4 mins): Ask a tailored project architecture question on their primary project (${projects[0]?.title || projects[0]?.name || 'Primary Project'}).
-2. Stage 2 (Category: "technical", Type: "verbal", Time: 4 mins): Deep-dive question on the core concepts in their resume (e.g. RAG, Dijkstra algorithm, OOP principles, or semantic search).
-3. Stage 3 (Category: "sql", Type: "coding", Language: "sql", Time: 10 mins): Compulsory SQL challenge relevant to their stated database stack (${databases}). Include schema, prompt, starter code, 1 visible test case, and 1 hidden test case.
-4. Stage 4 (Category: "coding", Type: "coding", Language: "${codingLang}", Time: 15 mins): Algorithmic coding challenge in ${codingLang}. Include function starter code, 2 visible test cases, and 2 hidden edge test cases with "isHidden": true.
-5. Stage 5 (Category: "architecture", Type: "verbal", Time: 4 mins): System design / data flow question based on their industrial training / secondary project.
-6. Stage 6 (Category: "behavioral", Type: "verbal", Time: 3 mins): Situational engineering question on teamwork, debugging, or project leadership.
-
-IMPORTANT:
-- Every testCase in Stage 3 and Stage 4 must have: "id" (int), "name" (string), "isHidden" (boolean), "input" (string), "expected" (string).
-
-Output ONLY valid raw JSON without markdown formatting:
+Generate tailored verbal interview questions for Stage 1, Stage 2, Stage 5, and Stage 6.
+Do NOT generate coding questions (those are fixed).
+Output ONLY valid raw JSON:
 {
-  "questions": [
-    {
-      "id": 1,
-      "category": "intro",
-      "type": "verbal",
-      "allocatedMinutes": 4,
-      "question": "<direct question>",
-      "context": "Project Architecture"
-    },
-    {
-      "id": 2,
-      "category": "technical",
-      "type": "verbal",
-      "allocatedMinutes": 4,
-      "question": "<direct question on RAG, Dijkstra, OOP, or Search concepts>",
-      "context": "Core Technical Depth"
-    },
-    {
-      "id": 3,
-      "category": "sql",
-      "type": "coding",
-      "language": "sql",
-      "allocatedMinutes": 10,
-      "question": "<SQL Problem statement with table schemas>",
-      "starterCode": "-- Write your SQL query here\\nSELECT \\n    \\nFROM ;",
-      "testCases": [
-        { "id": 1, "isHidden": false, "name": "Visible Case 1", "input": "Sample Table with 5 rows", "expected": "Expected Query Result" },
-        { "id": 2, "isHidden": true, "name": "Hidden Edge Case (NULLs/Duplicates)", "input": "Edge records with NULLs", "expected": "Correct distinct output" }
-      ]
-    },
-    {
-      "id": 4,
-      "category": "coding",
-      "type": "coding",
-      "language": "${codingLang}",
-      "allocatedMinutes": 15,
-      "question": "<Algorithmic Problem statement with constraints>",
-      "starterCode": "<Starter boilerplate in ${codingLang}>",
-      "testCases": [
-        { "id": 1, "isHidden": false, "name": "Test Case 1", "input": "<input 1>", "expected": "<output 1>" },
-        { "id": 2, "isHidden": false, "name": "Test Case 2", "input": "<input 2>", "expected": "<output 2>" },
-        { "id": 3, "isHidden": true, "name": "Hidden Case 1 (Boundary)", "input": "<edge input 1>", "expected": "<edge output 1>" },
-        { "id": 4, "isHidden": true, "name": "Hidden Case 2 (Duplicates/Empty)", "input": "<edge input 2>", "expected": "<edge output 2>" }
-      ]
-    },
-    {
-      "id": 5,
-      "category": "architecture",
-      "type": "verbal",
-      "allocatedMinutes": 4,
-      "question": "<Architecture & system design question>",
-      "context": "System & Data Flow"
-    },
-    {
-      "id": 6,
-      "category": "behavioral",
-      "type": "verbal",
-      "allocatedMinutes": 3,
-      "question": "<Behavioral & problem solving question>",
-      "context": "Engineering Practices"
-    }
-  ]
+  "stage1": "<tailored project architecture question for ${p1}>",
+  "stage2": "<tailored technical concept question>",
+  "stage5": "<tailored system architecture / data flow question>",
+  "stage6": "<tailored situational engineering question>"
 }`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text().trim();
-
-    if (text.startsWith('```')) {
-      text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+      const verbalData = await generateGeminiContentWithFallback(genAI, prompt);
+      if (verbalData.stage1) stage1Question = verbalData.stage1;
+      if (verbalData.stage2) stage2Question = verbalData.stage2;
+      if (verbalData.stage5) stage5Question = verbalData.stage5;
+      if (verbalData.stage6) stage6Question = verbalData.stage6;
+    } catch (err) {
+      console.warn('Using baseline tailored verbal questions:', err.message);
     }
-
-    const data = JSON.parse(text);
-    if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
-      return data.questions;
-    }
-    return getMockResumeQuestions(profile, difficulty);
-  } catch (err) {
-    console.error('Error calling Gemini for resume questions:', err);
-    return getMockResumeQuestions(profile, difficulty);
   }
-};
-
-/**
- * Fallback questions if Gemini API is offline - dynamically tailored to resume content
- */
-function getMockResumeQuestions(profile, difficulty) {
-  const summary = profile.summaryReport || {};
-  const projects = summary.projects || profile.projects || [];
-  const p1 = projects[0]?.title || projects[0]?.name || 'AI-Powered Mock Interview Platform';
-  const p2 = projects[1]?.title || projects[1]?.name || 'Disaster Rescue Management System';
-  const primarySkill = (profile.skills?.technical?.[0] || 'Java').toLowerCase();
-  const codingLang = primarySkill.includes('python') ? 'python' : (primarySkill.includes('java') ? 'java' : 'javascript');
-
-  const javaStarter = `public class Solution {\n    public static int findSecondHighest(int[] nums) {\n        if (nums == null || nums.length < 2) return -1;\n        // Implement your logic below\n        \n        return -1;\n    }\n}`;
-  const pyStarter = `def find_second_highest(nums):\n    if not nums or len(nums) < 2:\n        return -1\n    # Implement your logic below\n    return -1`;
-  const jsStarter = `function findSecondHighest(nums) {\n    if (!nums || nums.length < 2) return -1;\n    // Implement your logic below\n    return -1;\n}`;
 
   return [
     {
@@ -427,7 +295,7 @@ function getMockResumeQuestions(profile, difficulty) {
       category: 'intro',
       type: 'verbal',
       allocatedMinutes: 4,
-      question: `Walk me through the architecture of "${p1}". How does vector search and RAG work under the hood, and how did you calculate the ATS resume score?`,
+      question: stage1Question,
       context: 'Resume Project Deep Dive'
     },
     {
@@ -435,8 +303,8 @@ function getMockResumeQuestions(profile, difficulty) {
       category: 'technical',
       type: 'verbal',
       allocatedMinutes: 4,
-      question: `In your "${p2}" project, why did you select Dijkstra's Algorithm for volunteer routing? What is its time complexity and how did you handle real-time location updates?`,
-      context: 'Algorithm & Concept Verification'
+      question: stage2Question,
+      context: 'Core Technical Depth'
     },
     {
       id: 3,
@@ -444,12 +312,11 @@ function getMockResumeQuestions(profile, difficulty) {
       type: 'coding',
       language: 'sql',
       allocatedMinutes: 10,
-      question: `Write an SQL query to find the 2nd Highest Salary from the Employees table (columns: id, name, department_id, salary). If there is no second highest salary, return NULL.`,
-      starterCode: `-- Compulsory SQL Challenge\nSELECT \n    MAX(salary) AS SecondHighestSalary\nFROM Employees\nWHERE salary < (SELECT MAX(salary) FROM Employees);`,
-      testCases: [
-        { id: 1, isHidden: false, name: "Visible Case 1", input: "Employees: [1: 100, 2: 200, 3: 300]", expected: "200" },
-        { id: 2, isHidden: true, name: "Hidden Case 1 (Single employee / all equal)", input: "Employees: [1: 100, 2: 100]", expected: "NULL" }
-      ]
+      title: selectedSql.title,
+      question: selectedSql.question,
+      starterCode: sqlStarter,
+      starterCodes: selectedSql.starterCode,
+      testCases: selectedSql.testCases
     },
     {
       id: 4,
@@ -457,54 +324,52 @@ function getMockResumeQuestions(profile, difficulty) {
       type: 'coding',
       language: codingLang,
       allocatedMinutes: 15,
-      question: `Write an optimal O(N) function to find the Second Highest unique number in an unsorted integer array without sorting. Return -1 if no such element exists.`,
-      starterCode: codingLang === 'java' ? javaStarter : (codingLang === 'python' ? pyStarter : jsStarter),
-      testCases: [
-        { id: 1, isHidden: false, name: "Visible Case 1", input: "[10, 20, 4, 45, 99]", expected: "45" },
-        { id: 2, isHidden: false, name: "Visible Case 2", input: "[5, 2]", expected: "2" },
-        { id: 3, isHidden: true, name: "Hidden Edge Case 1 (Duplicates)", input: "[10, 10, 10]", expected: "-1" },
-        { id: 4, isHidden: true, name: "Hidden Edge Case 2 (Single item / Empty)", input: "[100]", expected: "-1" }
-      ]
+      title: selectedProg.title,
+      functionName: selectedProg.functionName,
+      question: selectedProg.question,
+      starterCode: progStarter,
+      starterCodes: selectedProg.starterCode,
+      testCases: selectedProg.testCases
     },
     {
       id: 5,
       category: 'architecture',
       type: 'verbal',
       allocatedMinutes: 4,
-      question: `During your Intel Unnati Industrial Training or document processing projects, what is the fundamental difference between keyword search and semantic vector search? How do you extract structured content from PDFs?`,
-      context: 'Document & Search Architecture'
+      question: stage5Question,
+      context: 'System & Data Flow'
     },
     {
       id: 6,
       category: 'behavioral',
       type: 'verbal',
       allocatedMinutes: 3,
-      question: `As a team lead (e.g. in Smart India Hackathon), how did you handle critical technical bottlenecks or conflicting opinions under tight deadlines?`,
-      context: 'Leadership & Engineering Mindset'
+      question: stage6Question,
+      context: 'Engineering Mindset & Leadership'
     }
   ];
-}
-
+};
 
 /**
- * Strict Code Evaluator
- * Enforces:
- * - Empty / Stub skeleton code -> Score 0, test cases fail.
- * - Passing visible test cases only -> Max 40% score.
- * - Passing both visible AND all hidden edge cases -> 90-100% score.
+ * Deterministic JavaScript Runner via Node VM Sandbox
  */
-const evaluateCodeSubmission = async (question, code, language, testCases = []) => {
-  const trimmed = (code || '').trim();
-  
-  // Check if code is empty or untouched template
-  const isDefaultSkeleton = 
+function evaluateJavaScriptInSandbox(candidateCode, questionTitleOrObj, testCases = []) {
+  // Find matching question definition to get functionName and isLinkedList
+  let matchedProg = PROGRAMMING_QUESTIONS.find(p => 
+    p.title?.toLowerCase() === questionTitleOrObj?.toLowerCase() ||
+    (typeof questionTitleOrObj === 'string' && questionTitleOrObj.toLowerCase().includes(p.title.toLowerCase()))
+  );
+
+  const functionName = matchedProg?.functionName || extractFunctionName(candidateCode) || 'twoSum';
+  const isLinkedList = Boolean(matchedProg?.isLinkedList);
+
+  const trimmed = (candidateCode || '').trim();
+  const isPlaceholderOnly =
     !trimmed ||
     trimmed.length < 25 ||
-    trimmed.includes('// Implement your logic below\n        return -1;') ||
-    trimmed.includes('# Implement your logic below\n    return -1') ||
-    trimmed.includes('// Implement your solution here\n        return -1;');
+    trimmed.toLowerCase().includes('write your code inside function call');
 
-  if (isDefaultSkeleton) {
+  if (isPlaceholderOnly) {
     return {
       score: 0,
       isCorrect: false,
@@ -516,7 +381,7 @@ const evaluateCodeSubmission = async (question, code, language, testCases = []) 
       completeness: 0,
       timeComplexity: 'N/A',
       spaceComplexity: 'N/A',
-      feedback: 'Incomplete implementation. The code returns the default placeholder value without algorithm logic.',
+      feedback: 'Incomplete implementation. Please write your solution inside the function call.',
       testCaseResults: (testCases || []).map((tc, i) => ({
         id: tc.id || (i + 1),
         name: tc.name || `Case ${i + 1}`,
@@ -524,20 +389,249 @@ const evaluateCodeSubmission = async (question, code, language, testCases = []) 
         passed: false,
         input: tc.isHidden ? '[Hidden Input]' : (tc.input || ''),
         expected: tc.isHidden ? '[Locked]' : (tc.expected || ''),
-        actual: 'Default / Incomplete (-1)',
+        actual: 'No implementation',
+        details: 'Failed: Solution was not implemented.'
+      }))
+    };
+  }
+
+  // Linked list helpers for VM
+  const harness = isLinkedList ? `
+    function ListNode(val, next) {
+      this.val = (val===undefined ? 0 : val);
+      this.next = (next===undefined ? null : next);
+    }
+    function arrayToList(arr) {
+      if (!arr || !arr.length) return null;
+      let head = new ListNode(arr[0]);
+      let curr = head;
+      for (let i = 1; i < arr.length; i++) {
+        curr.next = new ListNode(arr[i]);
+        curr = curr.next;
+      }
+      return head;
+    }
+    function listToArray(head) {
+      const res = [];
+      let curr = head;
+      let count = 0;
+      while (curr && count < 1000) {
+        res.push(curr.val);
+        curr = curr.next;
+        count++;
+      }
+      return res;
+    }
+  ` : '';
+
+  let passedCount = 0;
+  const totalCases = testCases.length || 1;
+  const testResults = [];
+
+  for (let idx = 0; idx < testCases.length; idx++) {
+    const tc = testCases[idx];
+    const isHidden = Boolean(tc.isHidden);
+
+    try {
+      let argsToPass = tc.rawArgs;
+      if (!argsToPass) {
+        argsToPass = extractArgsFromInputString(tc.input);
+      }
+
+      const scriptCode = `
+        ${harness}
+        ${candidateCode}
+
+        (function() {
+          let args = ${JSON.stringify(argsToPass)};
+          ${isLinkedList ? 'args = args.map(a => Array.isArray(a) ? arrayToList(a) : a);' : ''}
+          const fn = typeof ${functionName} === 'function' ? ${functionName} : (typeof solve === 'function' ? solve : null);
+          if (!fn) throw new Error("Function '${functionName}' is not defined.");
+          let result = fn.apply(null, args);
+          ${isLinkedList ? 'result = listToArray(result);' : ''}
+          return result;
+        })();
+      `;
+
+      const sandboxContext = vm.createContext({
+        console: { log: () => {} },
+        Map,
+        Set,
+        Array,
+        Object,
+        Math
+      });
+
+      const script = new vm.Script(scriptCode);
+      const actualVal = script.runInContext(sandboxContext, { timeout: 1000 });
+
+      const matches = checkOutputsMatch(actualVal, tc.expected);
+
+      if (matches) {
+        passedCount++;
+        testResults.push({
+          id: tc.id || (idx + 1),
+          name: tc.name || (isHidden ? `Hidden Case ${idx + 1}` : `Visible Case ${idx + 1}`),
+          isHidden,
+          passed: true,
+          input: isHidden ? '[Hidden Input]' : (tc.input || ''),
+          expected: isHidden ? '[Locked]' : (tc.expected || ''),
+          actual: isHidden ? '[Match]' : formatValue(actualVal),
+          details: 'Passed: Output matches expected result.'
+        });
+      } else {
+        testResults.push({
+          id: tc.id || (idx + 1),
+          name: tc.name || (isHidden ? `Hidden Case ${idx + 1}` : `Visible Case ${idx + 1}`),
+          isHidden,
+          passed: false,
+          input: isHidden ? '[Hidden Input]' : (tc.input || ''),
+          expected: isHidden ? '[Locked]' : (tc.expected || ''),
+          actual: isHidden ? '[Mismatch]' : formatValue(actualVal),
+          details: 'Failed: Output did not match expected value.'
+        });
+      }
+    } catch (err) {
+      testResults.push({
+        id: tc.id || (idx + 1),
+        name: tc.name || (isHidden ? `Hidden Case ${idx + 1}` : `Visible Case ${idx + 1}`),
+        isHidden,
+        passed: false,
+        input: isHidden ? '[Hidden Input]' : (tc.input || ''),
+        expected: isHidden ? '[Locked]' : (tc.expected || ''),
+        actual: `Error: ${err.message}`,
+        details: `Execution Error: ${err.message}`
+      });
+    }
+  }
+
+  const score = Math.round((passedCount / totalCases) * 100);
+  const isCorrect = score === 100;
+
+  return {
+    score,
+    isCorrect,
+    technicalAccuracy: score,
+    keywordCoverage: score >= 60 ? 90 : 50,
+    communication: 85,
+    confidence: score >= 60 ? 90 : 40,
+    clarity: 85,
+    completeness: score,
+    timeComplexity: isCorrect ? 'Optimal O(N) or O(log N)' : 'Needs Optimization',
+    spaceComplexity: isCorrect ? 'Optimal' : 'Needs Optimization',
+    feedback: isCorrect
+      ? 'All test cases passed successfully! Clean implementation with optimal time and space complexity.'
+      : `Passed ${passedCount} of ${totalCases} test cases. Review edge cases and boundary handling.`,
+    testCaseResults: testResults
+  };
+}
+
+function extractFunctionName(code) {
+  const match = code.match(/function\s+([a-zA-Z0-9_$]+)\s*\(/);
+  return match ? match[1] : null;
+}
+
+function extractArgsFromInputString(inputStr) {
+  if (!inputStr) return [];
+  try {
+    // If inputStr looks like "nums = [2,7,11,15], target = 9"
+    if (inputStr.includes('=')) {
+      const parts = inputStr.split(',').map(p => p.trim());
+      const args = [];
+      for (const part of parts) {
+        const eqIdx = part.indexOf('=');
+        if (eqIdx !== -1) {
+          const valStr = part.slice(eqIdx + 1).trim();
+          args.push(JSON.parse(valStr.replace(/'/g, '"')));
+        }
+      }
+      return args;
+    }
+  } catch (e) {}
+  return [inputStr];
+}
+
+function checkOutputsMatch(actual, expected) {
+  if (actual === undefined && expected === 'undefined') return true;
+  if (actual === null && (expected === 'null' || expected === 'NULL')) return true;
+
+  const actualFormatted = formatValue(actual);
+  const normExpected = String(expected).trim().replace(/\s+/g, '');
+  const normActual = actualFormatted.replace(/\s+/g, '');
+
+  if (normActual === normExpected) return true;
+
+  // Compare parsed objects/arrays
+  try {
+    const p1 = JSON.parse(normActual.replace(/'/g, '"'));
+    const p2 = JSON.parse(normExpected.replace(/'/g, '"'));
+    return JSON.stringify(p1) === JSON.stringify(p2);
+  } catch (e) {}
+
+  return false;
+}
+
+function formatValue(val) {
+  if (val === null) return 'null';
+  if (val === undefined) return 'undefined';
+  if (typeof val === 'object') {
+    return JSON.stringify(val);
+  }
+  return String(val);
+}
+
+/**
+ * Strict Code Evaluator
+ * - If JavaScript: executes in safe VM sandbox against test cases.
+ * - If Python / Java / SQL: uses multi-model Gemini judge with fallback.
+ */
+const evaluateCodeSubmission = async (question, code, language = 'javascript', testCases = []) => {
+  const trimmed = (code || '').trim();
+  const langLower = (language || 'javascript').toLowerCase();
+
+  // If JavaScript, run deterministic Node VM sandbox for instant & exact LeetCode evaluation
+  if (langLower === 'javascript' || langLower === 'js') {
+    return evaluateJavaScriptInSandbox(trimmed, question, testCases);
+  }
+
+  // Check if code is empty placeholder
+  const isPlaceholder = 
+    !trimmed ||
+    trimmed.length < 25 ||
+    trimmed.includes('// write your code inside function call\n    \n}') ||
+    trimmed.includes('# write your code inside function call\n    pass') ||
+    trimmed.includes('-- write your code inside function call\nSELECT \n    \nFROM');
+
+  if (isPlaceholder) {
+    return {
+      score: 0,
+      isCorrect: false,
+      technicalAccuracy: 0,
+      keywordCoverage: 0,
+      communication: 0,
+      confidence: 0,
+      clarity: 0,
+      completeness: 0,
+      timeComplexity: 'N/A',
+      spaceComplexity: 'N/A',
+      feedback: 'Incomplete implementation. Please write your solution inside the function call.',
+      testCaseResults: (testCases || []).map((tc, i) => ({
+        id: tc.id || (i + 1),
+        name: tc.name || `Case ${i + 1}`,
+        isHidden: Boolean(tc.isHidden),
+        passed: false,
+        input: tc.isHidden ? '[Hidden Input]' : (tc.input || ''),
+        expected: tc.isHidden ? '[Locked]' : (tc.expected || ''),
+        actual: 'No implementation',
         details: 'Failed: Solution was not implemented.'
       }))
     };
   }
 
   const genAI = getGenAI();
-  if (!genAI) {
-    return getStrictMockCodeEvaluation(trimmed, language, testCases);
-  }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
-    const prompt = `You are a strict, production-grade Automated Code Evaluator and Judge for technical coding interviews.
+  if (genAI) {
+    try {
+      const prompt = `You are a strict, automated Code Judge for technical interview questions.
 Evaluate the candidate's code submission against the problem statement and test cases.
 
 Problem Statement:
@@ -549,24 +643,18 @@ Candidate Code:
 ${trimmed}
 \`\`\`
 
-Test Cases to Verify (some are hidden edge cases):
+Test Cases to Verify:
 ${JSON.stringify(testCases, null, 2)}
 
-STRICT GRADING & SCORING RULES:
-1. Trace the code step-by-step with EACH test case input. Calculate what the code actually outputs.
-2. If the code only returns a hardcoded default (e.g. return -1 or select *) or incomplete loop without solving the problem:
-   - score MUST be 0.
-   - All test cases where expected output != actual must have passed: false.
-3. If the code solves visible test cases but FAILS hidden edge cases (e.g. duplicates, empty arrays, tie values):
-   - score MUST BE capped between 35 and 40 (maximum 40%).
-   - isCorrect: false.
-4. If and ONLY IF the code passes ALL visible test cases AND ALL hidden edge cases with correct logic and complexity:
-   - score: 85 - 100.
-   - isCorrect: true.
+GRADING RULES:
+1. Trace the code step-by-step with each test case.
+2. If the code is just template or returns hardcoded values without the required algorithm: score = 0, all passed: false.
+3. If the code solves visible test cases but fails edge cases: score between 40 and 60.
+4. If the code is correct, handles edge cases, and has optimal complexity: score between 90 and 100, isCorrect: true.
 
-Output ONLY valid raw JSON with this exact schema:
+Output ONLY valid raw JSON:
 {
-  "score": <integer between 0 and 100>,
+  "score": <integer 0-100>,
   "isCorrect": <boolean>,
   "technicalAccuracy": <integer 0-100>,
   "keywordCoverage": <integer 0-100>,
@@ -576,103 +664,89 @@ Output ONLY valid raw JSON with this exact schema:
   "completeness": <integer 0-100>,
   "timeComplexity": "<e.g. O(N)>",
   "spaceComplexity": "<e.g. O(1)>",
-  "feedback": "<concise, constructive code review explaining pass/fail reasons>",
+  "feedback": "<concise code review>",
   "testCaseResults": [
     {
       "id": <integer>,
       "name": "<string>",
       "isHidden": <boolean>,
       "passed": <boolean>,
-      "input": "<string or '[Hidden Input]'>",
-      "expected": "<string or '[Locked]'>",
-      "actual": "<string result computed by the candidate's code>",
-      "details": "<clear explanation why it passed or failed>"
+      "input": "<string>",
+      "expected": "<string>",
+      "actual": "<string>",
+      "details": "<pass/fail reason>"
     }
   ]
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text().trim();
-
-    if (text.startsWith('```')) {
-      text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+      return await generateGeminiContentWithFallback(genAI, prompt);
+    } catch (err) {
+      console.error('Error in Gemini code evaluation fallback:', err.message);
     }
-
-    const evaluation = JSON.parse(text);
-    return evaluation;
-  } catch (err) {
-    console.error('Error evaluating code with Gemini:', err);
-    return getStrictMockCodeEvaluation(trimmed, language, testCases);
   }
+
+  // Semantic heuristic fallback for non-JS if Gemini is offline
+  return getSemanticCodeEvaluationFallback(trimmed, language, question, testCases);
 };
 
 /**
- * Strict local heuristic evaluation if Gemini is offline
+ * Intelligent semantic fallback for Python, Java, SQL
  */
-function getStrictMockCodeEvaluation(code, language, testCases = []) {
+function getSemanticCodeEvaluationFallback(code, language, question, testCases = []) {
   const codeLower = code.toLowerCase();
-  
-  // Detect if code contains actual algorithmic logic
-  const hasLoopOrLogic = 
-    (codeLower.includes('for(') || codeLower.includes('for ') || codeLower.includes('while') || codeLower.includes('select') || codeLower.includes('max(') || codeLower.includes('.sort')) &&
-    (codeLower.includes('first') || codeLower.includes('second') || codeLower.includes('max') || codeLower.includes('highest') || codeLower.includes('>') || codeLower.includes('<'));
-
-  // Detect if code handles duplicate/edge cases
-  const handlesDuplicates = 
-    codeLower.includes('!=') || codeLower.includes('distinct') || codeLower.includes('set') || (codeLower.includes('>') && codeLower.includes('second'));
-
-  let allPassed = false;
-  let visiblePassed = false;
+  let passed = false;
   let score = 0;
 
-  if (hasLoopOrLogic && handlesDuplicates && code.length > 70) {
-    allPassed = true;
-    visiblePassed = true;
-    score = 95;
-  } else if (hasLoopOrLogic && code.length > 50) {
-    visiblePassed = true;
-    allPassed = false;
-    score = 40; // Visible test cases passed only
+  if (language === 'sql') {
+    const hasSelect = codeLower.includes('select');
+    const hasFrom = codeLower.includes('from');
+    const hasWhereOrJoin = codeLower.includes('where') || codeLower.includes('join') || codeLower.includes('group by') || codeLower.includes('over');
+    if (hasSelect && hasFrom && hasWhereOrJoin && code.length > 40) {
+      passed = true;
+      score = 90;
+    } else if (hasSelect && hasFrom) {
+      score = 45;
+    }
   } else {
-    visiblePassed = false;
-    allPassed = false;
-    score = 0;
+    const hasLogic = (codeLower.includes('for ') || codeLower.includes('while') || codeLower.includes('if ') || codeLower.includes('return') || codeLower.includes('map') || codeLower.includes('set'));
+    if (hasLogic && code.length > 50) {
+      passed = true;
+      score = 88;
+    } else if (code.length > 30) {
+      score = 40;
+    }
   }
 
-  const tcResults = (testCases || []).map((tc, idx) => {
+  const results = (testCases || []).map((tc, idx) => {
     const isHidden = Boolean(tc.isHidden);
-    const passed = isHidden ? allPassed : visiblePassed;
-
+    const tcPassed = isHidden ? (score >= 80) : (score >= 40);
     return {
       id: tc.id || (idx + 1),
-      name: tc.name || (isHidden ? `Hidden Case ${idx + 1}` : `Case ${idx + 1}`),
+      name: tc.name || (isHidden ? `Hidden Case ${idx + 1}` : `Visible Case ${idx + 1}`),
       isHidden,
-      passed,
+      passed: tcPassed,
       input: isHidden ? '[Hidden Input]' : (tc.input || ''),
       expected: isHidden ? '[Locked]' : (tc.expected || ''),
-      actual: passed ? (isHidden ? '[Match]' : (tc.expected || 'Correct')) : 'Incorrect Output / Default Return',
-      details: passed ? 'Output matches expected result.' : 'Failed: Solution does not compute the expected value.'
+      actual: tcPassed ? (isHidden ? '[Match]' : (tc.expected || 'Correct')) : 'Incorrect Output',
+      details: tcPassed ? 'Passed: Logic meets problem constraints.' : 'Failed: Solution missing edge case condition.'
     };
   });
 
   return {
     score,
-    isCorrect: allPassed,
+    isCorrect: score >= 80,
     technicalAccuracy: score,
     keywordCoverage: score,
-    communication: 75,
-    confidence: score > 0 ? 80 : 20,
+    communication: 80,
+    confidence: score > 0 ? 80 : 30,
     clarity: 80,
     completeness: score,
-    timeComplexity: allPassed ? 'O(N)' : 'Incomplete',
-    spaceComplexity: allPassed ? 'O(1)' : 'N/A',
-    feedback: allPassed
-      ? 'Excellent solution! Correctly passes both standard inputs and hidden edge cases with optimal time complexity.'
-      : (visiblePassed
-        ? 'Partial Credit (40%): Solution passes visible test cases but fails hidden boundary/duplicate edge cases. Refine your logic to handle edge conditions.'
-        : 'Solution failed: The code returned incorrect or default values. Please implement the required algorithm logic.'),
-    testCaseResults: tcResults
+    timeComplexity: score >= 80 ? 'O(N)' : 'Incomplete',
+    spaceComplexity: score >= 80 ? 'O(1)' : 'N/A',
+    feedback: score >= 80
+      ? 'Good solution! Algorithm structure and syntax satisfy standard problem requirements.'
+      : 'Partial implementation. Review logic conditions and edge cases.',
+    testCaseResults: results
   };
 }
 
@@ -686,9 +760,10 @@ const evaluateResumeInterviewOverall = async (responsesList, profile) => {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const responsesSummary = responsesList.map((r, i) => {
-      const type = (r.responseType === 'coding' || r.type === 'coding') ? `[Code Submission in ${r.language || 'Code'}]\n${r.code}` : `Answer:\n${r.answer}`;
+      const type = (r.responseType === 'coding' || r.type === 'coding' || r.code)
+        ? `[Code Submission in ${r.language || 'Code'}]\n${r.code || r.answer}`
+        : `Answer:\n${r.answer}`;
       return `Q${i+1} (${r.category || 'tech'}): ${r.question}\n${type}\nScore: ${r.evaluation?.score || 0}/100\nFeedback: ${r.evaluation?.feedback || ''}`;
     }).join('\n\n');
 
@@ -722,15 +797,7 @@ JSON Structure:
   "suggestions": ["<actionable recommendation 1>", "<actionable recommendation 2>", "<actionable recommendation 3>"]
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text().trim();
-
-    if (text.startsWith('```')) {
-      text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-    }
-
-    return JSON.parse(text);
+    return await generateGeminiContentWithFallback(genAI, prompt);
   } catch (err) {
     console.error('Error evaluating overall resume interview:', err);
     return getMockResumeOverallEvaluation(responsesList, profile);
@@ -753,7 +820,7 @@ function getMockResumeOverallEvaluation(responsesList, profile) {
       domainKnowledge: Math.min(avg + 1, 90),
       employabilityScore: avg
     },
-    summary: `Candidate completed the 30-35 min Resume-Based AI Interview targeting ${profile?.targetRole || 'Full Stack Developer'}. Demonstrated good comprehension of stated projects and key technical foundations with an overall employability score of ${avg}%.`,
+    summary: `Candidate completed the Resume-Based AI Interview targeting ${profile?.targetRole || 'Full Stack Developer'}. Demonstrated good comprehension of stated projects and key technical foundations with an overall employability score of ${avg}%.`,
     strengths: [
       'Articulated project choices and tech stack selections effectively.',
       'Demonstrated structured problem decomposition on coding challenges.',
@@ -764,7 +831,7 @@ function getMockResumeOverallEvaluation(responsesList, profile) {
       'Code solutions can benefit from explicit boundary and null checks.'
     ],
     suggestions: [
-      'Practice explaining design trade-offs with quantitative metrics (e.g. latency, throughput).',
+      'Practice explaining design trade-offs with quantitative metrics (latency, throughput).',
       'Use the STAR method for behavioral responses.',
       'Review time/space complexity optimizations for core algorithms.'
     ]
@@ -779,4 +846,3 @@ module.exports = {
   evaluateCodeSubmission,
   evaluateResumeInterviewOverall
 };
-
