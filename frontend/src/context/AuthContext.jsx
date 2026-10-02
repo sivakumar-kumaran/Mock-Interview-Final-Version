@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
   // Check login status on reload
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedUser = localStorage.getItem('mock_interview_user');
+      const storedUser = sessionStorage.getItem('mock_interview_user');
       if (storedUser) {
         try {
           const parsed = JSON.parse(storedUser);
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
               hasUploadedResume: profile.hasUploadedResume || false
             };
             setUser(updatedUser);
-            localStorage.setItem('mock_interview_user', JSON.stringify(updatedUser));
+            sessionStorage.setItem('mock_interview_user', JSON.stringify(updatedUser));
           }
         } catch (error) {
           console.error('Session verification failed, logging out:', error);
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
         const userData = res.data.data;
         setUser(userData);
         setAuthHeader(userData.token);
-        localStorage.setItem('mock_interview_user', JSON.stringify(userData));
+        sessionStorage.setItem('mock_interview_user', JSON.stringify(userData));
         return { success: true };
       }
     } catch (error) {
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
         const userData = res.data.data;
         setUser(userData);
         setAuthHeader(userData.token);
-        localStorage.setItem('mock_interview_user', JSON.stringify(userData));
+        sessionStorage.setItem('mock_interview_user', JSON.stringify(userData));
         return { success: true };
       }
     } catch (error) {
@@ -101,14 +101,14 @@ export const AuthProvider = ({ children }) => {
     }
     setUser(null);
     setAuthHeader(null);
-    localStorage.removeItem('mock_interview_user');
+    sessionStorage.removeItem('mock_interview_user');
   };
 
   const updateProfileInContext = (updatedData) => {
     if (user) {
       const newUser = { ...user, ...updatedData };
       setUser(newUser);
-      localStorage.setItem('mock_interview_user', JSON.stringify(newUser));
+      sessionStorage.setItem('mock_interview_user', JSON.stringify(newUser));
     }
   };
 
