@@ -75,4 +75,12 @@ const interviewSchema = new mongoose.Schema({
   }
 });
 
+// --- Explicit Indexes ---
+// Most frequent query: fetch all interviews for a user, newest first (history page)
+interviewSchema.index({ userId: 1, date: -1 });
+// Filter by user + status (e.g., find in-progress sessions for auth guard)
+interviewSchema.index({ userId: 1, status: 1 });
+// Analytics: count/filter interviews by type across all users
+interviewSchema.index({ interviewType: 1, date: -1 });
+
 module.exports = mongoose.model('Interview', interviewSchema);

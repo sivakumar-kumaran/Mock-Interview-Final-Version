@@ -18,4 +18,10 @@ const questionSchema = new mongoose.Schema({
   }
 });
 
+// --- Explicit Indexes ---
+// Primary practice-page query: all questions for a topic (with optional difficulty filter)
+questionSchema.index({ topicId: 1, difficulty: 1 });
+// Secondary: filter by difficulty alone (e.g., 'all Beginner questions')
+questionSchema.index({ difficulty: 1 });
+
 module.exports = mongoose.model('Question', questionSchema);

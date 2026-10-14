@@ -156,6 +156,14 @@ const resumeProfileSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// --- Explicit Indexes ---
+// userId is unique:true which auto-creates a unique index (primary lookup for dashboard)
+// parsedAt: sort resumes by recency in admin views
+resumeProfileSchema.index({ parsedAt: -1 });
+// extractionMethod: quickly find all regex-fallback or low-confidence resumes for re-processing
+resumeProfileSchema.index({ extractionLowConfidence: 1 });
+resumeProfileSchema.index({ extractionMethod: 1 });
+
 module.exports = mongoose.model('ResumeProfile', resumeProfileSchema);
 
 

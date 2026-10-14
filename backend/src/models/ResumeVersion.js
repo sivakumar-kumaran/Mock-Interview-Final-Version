@@ -41,4 +41,10 @@ const resumeVersionSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// --- Explicit Indexes ---
+// Fetch all versions for a user sorted by version number (ascending)
+resumeVersionSchema.index({ userId: 1, versionNumber: 1 });
+// Sort all versions by upload date (admin analytics)
+resumeVersionSchema.index({ uploadedAt: -1 });
+
 module.exports = mongoose.model('ResumeVersion', resumeVersionSchema);

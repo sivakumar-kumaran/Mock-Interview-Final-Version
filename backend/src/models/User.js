@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add an email'],
     unique: true,
+    index: true,          // Primary login lookup — covered by unique index
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
       'Please add a valid email'
@@ -50,9 +51,17 @@ const userSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true           // For admin sorting by join date
   }
 });
+
+// --- Explicit Indexes ---
+// email is already indexed via unique:true above.
+// role index speeds up admin-panel queries that filter users by role.
+userSchema.index({ role: 1 });
+// Compound index: useful for paginating users sorted by creation date per role.
+userSchema.index({ role: 1, createdAt: -1 });
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function (next) {
