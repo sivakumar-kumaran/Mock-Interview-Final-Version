@@ -41,7 +41,7 @@ const LoginPage = () => {
         
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white mx-auto mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white mx-auto mb-4 shadow-green-glow">
             <Cpu size={24} />
           </div>
           <h2 className="font-outfit font-extrabold text-2xl text-brand-charcoal dark:text-dark-text mb-2">Welcome Back</h2>
@@ -61,7 +61,7 @@ const LoginPage = () => {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-brand-border dark:border-dark-border outline-none focus:border-brand-purple dark:focus:border-dark-purple bg-white dark:bg-dark-surface text-sm text-brand-charcoal dark:text-dark-text transition-colors"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-brand-border dark:border-dark-border outline-none focus:border-emerald-500 dark:focus:border-emerald-400 bg-white dark:bg-dark-surface text-sm text-brand-charcoal dark:text-dark-text transition-colors"
                 required
               />
             </div>
@@ -69,7 +69,7 @@ const LoginPage = () => {
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-xs font-bold text-brand-charcoal uppercase tracking-wider">Password</label>
+              <label className="block text-xs font-bold text-brand-charcoal dark:text-dark-text uppercase tracking-wider">Password</label>
             </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-brand-slate dark:text-dark-muted">

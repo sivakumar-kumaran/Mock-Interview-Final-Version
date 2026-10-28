@@ -13,7 +13,7 @@ export const ThemeProvider = ({ children }) => {
 
   const [appVersion, setAppVersion] = useState(() => {
     const stored = localStorage.getItem('mockai_app_version');
-    return stored === 'v2' ? 'v2' : 'v1';
+    return stored === 'v1' ? 'v1' : 'v2';
   });
 
   useEffect(() => {

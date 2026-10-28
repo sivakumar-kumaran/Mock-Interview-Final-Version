@@ -71,7 +71,7 @@ const Dashboard = () => {
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-purple to-brand-blue text-white flex items-center justify-center shadow-purple-glow">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-green-glow">
               <Sparkles size={20} />
             </div>
             <div>
@@ -79,8 +79,8 @@ const Dashboard = () => {
                 <h2 className="text-xl sm:text-2xl font-extrabold text-brand-charcoal dark:text-dark-text font-outfit">
                   Resume Intelligence & Profile
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-brand-purple text-white text-[10px] font-bold uppercase tracking-wider">
-                  Version 2
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                  AI Powered
                 </span>
               </div>
               <p className="text-xs text-brand-slate dark:text-dark-muted">
@@ -121,9 +121,9 @@ const Dashboard = () => {
             />
           </div>
         ) : (
-          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-brand-purple/10 via-brand-blue/10 to-brand-cyan/10 border-2 border-dashed border-brand-purple/30 dark:border-dark-purple/40 text-center">
+          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 border-2 border-dashed border-emerald-500/30 dark:border-emerald-500/40 text-center">
             <div className="max-w-xl mx-auto space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-3xl bg-brand-purple dark:bg-dark-purple text-white flex items-center justify-center shadow-purple-glow">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-green-glow">
                 <UploadCloud size={30} />
               </div>
               <h3 className="text-2xl font-extrabold text-brand-charcoal dark:text-dark-text font-outfit">
@@ -138,7 +138,7 @@ const Dashboard = () => {
                     setIsReplacingResume(false);
                     setIsUploadModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-purple dark:bg-dark-purple hover:bg-brand-purpleHover dark:hover:bg-dark-purpleHover text-white font-bold text-sm shadow-purple-glow hover:translate-y-[-1px] transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-bold text-sm shadow-green-glow hover:translate-y-[-1px] transition-all"
                 >
                   <UploadCloud size={18} />
                   <span>Upload or Paste Resume</span>
@@ -151,9 +151,9 @@ const Dashboard = () => {
       </section>
 
       {/* Bottom Link Banner: View History & Past Logs */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-brand-purple/10 via-brand-blue/10 to-emerald-500/10 border border-brand-border dark:border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border border-brand-border dark:border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-purple/10 dark:bg-dark-purple/20 text-brand-purple dark:text-dark-purple flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-sm">
             <FileText size={24} />
           </div>
           <div>

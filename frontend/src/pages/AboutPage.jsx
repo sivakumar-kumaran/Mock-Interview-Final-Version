@@ -16,31 +16,31 @@ const AboutPage = () => {
   ];
 
   const features = [
-    { icon: Mic, title: 'Speech-to-Text Recording', desc: 'Record your spoken answers with live transcription using native browser APIs. No plugins required.', color: 'from-brand-purple to-brand-blue' },
-    { icon: Brain, title: 'AI-Powered Evaluation', desc: 'Google Gemini AI evaluates your responses for technical accuracy, communication clarity, and completeness.', color: 'from-brand-blue to-brand-cyan' },
+    { icon: Mic, title: 'Speech-to-Text Recording', desc: 'Record your spoken answers with live transcription using native browser APIs. No plugins required.', color: 'from-emerald-500 to-teal-500' },
+    { icon: Brain, title: 'AI-Powered Evaluation', desc: 'Google Gemini AI evaluates your responses for technical accuracy, communication clarity, and completeness.', color: 'from-teal-500 to-cyan-500' },
     { icon: BarChart3, title: 'Performance Analytics', desc: 'Track your preparation progress with detailed dashboards, score trends, and strength analysis.', color: 'from-emerald-500 to-teal-500' },
-    { icon: ShieldCheck, title: 'Interview Integrity', desc: 'Full-screen enforcement, tab switch detection, and violation tracking simulate real exam conditions.', color: 'from-amber-500 to-orange-500' },
-    { icon: Users, title: 'Multiple Tracks', desc: '12 interview tracks covering Java, JavaScript, React, Node.js, SQL, DSA, OS, Networks, and more.', color: 'from-pink-500 to-rose-500' },
-    { icon: Zap, title: 'Instant Feedback', desc: 'Get actionable, per-question feedback immediately after your mock interview session ends.', color: 'from-violet-500 to-purple-500' },
+    { icon: ShieldCheck, title: 'Interview Integrity', desc: 'Full-screen enforcement, tab switch detection, and violation tracking simulate real exam conditions.', color: 'from-teal-600 to-emerald-600' },
+    { icon: Users, title: 'Multiple Tracks', desc: '12 interview tracks covering Java, JavaScript, React, Node.js, SQL, DSA, OS, Networks, and more.', color: 'from-cyan-500 to-teal-500' },
+    { icon: Zap, title: 'Instant Feedback', desc: 'Get actionable, per-question feedback immediately after your mock interview session ends.', color: 'from-emerald-400 to-teal-500' },
   ];
 
   return (
     <div className="relative overflow-hidden bg-white dark:bg-dark-bg min-h-screen select-none transition-colors duration-300">
       {/* Decorative Glow */}
-      <div className="bg-ambient-glow glow-purple"></div>
+      <div className="bg-ambient-glow glow-green"></div>
       <div className="bg-ambient-glow glow-blue"></div>
 
       {/* Hero Banner */}
       <section className="relative z-10 pt-20 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-purple/10 dark:bg-dark-purple/20 text-brand-purple dark:text-dark-purple text-sm font-semibold mb-6">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-semibold mb-6">
           <Info size={16} />
           <span>About MockAI</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-outfit font-extrabold text-brand-charcoal dark:text-dark-text leading-tight mb-6 flex items-center justify-center gap-2.5">
-          <Info className="text-brand-purple dark:text-dark-purple animate-pulse" size={36} />
+          <Info className="text-emerald-600 dark:text-emerald-400 animate-pulse" size={36} />
           <span>
             Your AI-Powered{' '}
-            <span className="bg-gradient-to-r from-brand-purple via-brand-blue to-brand-cyan bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
               Interview Coach
             </span>
           </span>
@@ -257,7 +257,7 @@ const AboutPage = () => {
         <p className="text-brand-slate dark:text-dark-muted mb-8">Jump into your first AI mock interview session today.</p>
         <Link
           to={user ? '/interview/setup' : '/register'}
-          className="inline-flex items-center gap-2 px-8 py-3.5 text-white bg-gradient-to-r from-brand-purple to-brand-blue hover:from-brand-purpleHover hover:to-brand-blue dark:from-dark-purple dark:to-dark-blue rounded-2xl font-outfit font-bold text-base shadow-purple-glow dark:shadow-neon-purple transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+          className="inline-flex items-center gap-2 px-8 py-3.5 text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 dark:from-emerald-500 dark:to-teal-500 rounded-2xl font-outfit font-bold text-base shadow-green-glow dark:shadow-neon-green transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
         >
           {user ? 'Start Interview' : 'Create Free Account'}
           <ArrowRight size={18} />

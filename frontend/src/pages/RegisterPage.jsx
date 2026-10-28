@@ -47,13 +47,13 @@ const RegisterPage = () => {
   return (
     <div className="min-h-[85vh] flex items-center justify-center bg-brand-surface/30 dark:bg-dark-bg relative px-4 py-8 select-none transition-colors duration-300">
       
-      <div className="bg-ambient-glow glow-purple"></div>
+      <div className="bg-ambient-glow glow-green"></div>
 
       <div className="w-full max-w-md bg-white dark:bg-dark-card rounded-3xl border border-brand-border dark:border-dark-border shadow-premium dark:shadow-dark-card p-8 relative z-10 glass-panel">
         
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white mx-auto mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white mx-auto mb-4 shadow-green-glow">
             <Cpu size={24} />
           </div>
           <h2 className="font-outfit font-extrabold text-2xl text-brand-charcoal dark:text-dark-text mb-2">Create Account</h2>

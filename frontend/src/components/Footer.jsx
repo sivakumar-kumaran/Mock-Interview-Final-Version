@@ -11,11 +11,11 @@ const Footer = () => {
           {/* Brand Col */}
           <div className="md:col-span-2 space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-green-glow">
                 <Cpu size={18} />
               </div>
               <span className="font-outfit font-extrabold text-lg text-brand-charcoal dark:text-dark-text">
-                Mock<span className="bg-gradient-to-r from-brand-purple to-brand-blue dark:from-dark-purple dark:to-dark-cyan bg-clip-text text-transparent">AI</span>
+                Mock<span className="bg-gradient-to-r from-emerald-500 to-teal-400 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">AI</span>
               </span>
             </Link>
             <p className="text-sm text-brand-slate dark:text-dark-muted max-w-sm">

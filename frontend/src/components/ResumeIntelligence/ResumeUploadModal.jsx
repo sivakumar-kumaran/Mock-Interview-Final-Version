@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { UploadCloud, FileText, CheckCircle2, AlertCircle, X, Loader2, Image, Sparkles, ClipboardCheck } from 'lucide-react';
 import ResumeAnalyzingCard from './ResumeAnalyzingCard';
@@ -18,6 +19,17 @@ const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = fal
   const [statusMessage, setStatusMessage] = useState('');
   const fileInputRef = useRef(null);
   const photoInputRef = useRef(null);
+
+  // Lock body scroll while modal is open to ensure fixed full background coverage
+  useEffect(() => {
+    if (isOpen) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = orig;
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -137,9 +149,9 @@ const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = fal
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+  return createPortal(
+    <div className="fixed inset-0 w-screen h-screen min-h-screen z-[999999] flex items-center justify-center p-4 bg-[#061014]/95 backdrop-blur-2xl animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
         
         {/* Glow Header */}
         <div className="flex items-center justify-between pb-4 border-b border-brand-border dark:border-dark-border mb-4 shrink-0">
@@ -357,7 +369,8 @@ const ResumeUploadModal = ({ isOpen, onClose, onUploadSuccess, isReplacing = fal
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

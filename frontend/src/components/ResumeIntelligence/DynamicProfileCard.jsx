@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   Code,
@@ -151,8 +152,8 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
     {
       name: 'Tech Stacks & Frameworks',
       icon: Layers,
-      iconColor: 'text-purple-500',
-      badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20 hover:border-purple-500/40',
+      iconColor: 'text-teal-500',
+      badgeClass: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20 hover:border-teal-500/40',
       skills: dedupeSkills([
         ...(summaryReport.technicalSkills?.backend || []),
         ...(summaryReport.technicalSkills?.frontend || []),
@@ -205,9 +206,9 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
       />
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-center">
+      {showDeleteConfirm && createPortal(
+        <div className="fixed inset-0 w-screen h-screen min-h-screen z-[999999] bg-[#061014]/95 backdrop-blur-2xl flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white dark:bg-dark-card border border-brand-border dark:border-dark-border rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-center my-auto">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
               <AlertTriangle size={28} />
             </div>
@@ -248,7 +249,8 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Main Candidate Header Card */}
@@ -267,7 +269,7 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-brand-purple dark:border-dark-purple shadow-md group-hover:opacity-80 transition-opacity"
                 />
               ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-brand-purple to-brand-blue text-white flex items-center justify-center font-outfit font-extrabold text-2xl shadow-purple-glow group-hover:scale-105 transition-transform">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center font-outfit font-extrabold text-2xl shadow-green-glow group-hover:scale-105 transition-transform">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -367,7 +369,7 @@ const DynamicProfileCard = ({ profile, user, onReplaceResume, onProfileUpdated }
             <button
               onClick={handleReanalyzeResume}
               disabled={reanalyzing}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white hover:opacity-90 text-xs font-bold shadow-purple-glow transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white hover:opacity-90 text-xs font-bold shadow-green-glow transition-all disabled:opacity-50"
               title="Re-run AI extraction directly from resume text"
             >
               <RefreshCw size={13} className={reanalyzing ? 'animate-spin' : ''} />

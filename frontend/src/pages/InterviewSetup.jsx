@@ -153,12 +153,12 @@ const InterviewSetup = () => {
               onClick={() => setMode('resume')}
               className="group text-left relative bg-white dark:bg-dark-card border-2 border-brand-purple dark:border-dark-purple rounded-3xl p-6 sm:p-7 hover:shadow-premium-hover dark:hover:shadow-neon-purple transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
             >
-              <div className="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-gradient-to-r from-brand-purple to-brand-blue text-white text-[10px] font-extrabold tracking-wider uppercase shadow-md">
-                🚀 Version 2
+              <div className="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-extrabold tracking-wider uppercase shadow-md">
+                ✨ Resume AI
               </div>
 
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-purple to-brand-blue flex items-center justify-center text-white mb-4 shadow-purple-glow group-hover:scale-105 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white mb-4 shadow-green-glow group-hover:scale-105 transition-transform">
                   <Sparkles size={22} />
                 </div>
                 <h3 className="font-outfit font-bold text-lg text-brand-charcoal dark:text-dark-text mb-1">

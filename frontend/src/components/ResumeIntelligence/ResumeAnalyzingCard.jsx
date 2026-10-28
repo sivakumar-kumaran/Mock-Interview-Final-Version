@@ -1,46 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Check, Brain, FileText, CheckCircle2, ShieldCheck } from 'lucide-react';
-
-const ANALYSIS_STEPS = [
-  'Extracting complete resume content & structure...',
-  'Extracting candidate name, summary & CGPA/percentage...',
-  'Deduplicating technical skills, frameworks & tools...',
-  'Cataloging engineering projects, internships & certifications...',
-  'Finalizing dynamic career intelligence & interview readiness...'
-];
+import { createPortal } from 'react-dom';
+import { FileText } from 'lucide-react';
 
 /**
  * ResumeAnalyzingCard Component
- * Displays a full-screen focused card informing the user that resume analysis is happening.
+ * Fixed full-screen takeover completely covering the background.
+ * Displays only "Resume processing" with futuristic animations.
  * When analysis completes, renders an animated "Payment Done" style success symbol (GPay/Apple Pay style)
- * before smoothly transitioning to the dashboard.
+ * before smoothly transitioning to dashboard.
  */
 const ResumeAnalyzingCard = ({
   isAnalyzing = false,
   isComplete = false,
   onComplete
 }) => {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [showSuccessBadge, setShowSuccessBadge] = useState(false);
 
-  // Cycle through informative steps during analysis
+  // Lock body scroll while the full-screen card is open to fully cover background
   useEffect(() => {
-    if (!isAnalyzing) {
-      setCurrentStepIndex(0);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setCurrentStepIndex((prev) => {
-        if (prev < ANALYSIS_STEPS.length - 1) {
-          return prev + 1;
-        }
-        return prev;
-      });
-    }, 1800);
-
-    return () => clearInterval(interval);
-  }, [isAnalyzing]);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   // Handle completion & trigger "Payment Done" style animation
   useEffect(() => {
@@ -50,7 +33,7 @@ const ResumeAnalyzingCard = ({
         if (onComplete) {
           onComplete();
         }
-      }, 1600); // 1.6s delay to show the payment done symbol before returning to dashboard
+      }, 1600);
       return () => clearTimeout(timer);
     } else {
       setShowSuccessBadge(false);
@@ -61,90 +44,85 @@ const ResumeAnalyzingCard = ({
     return null;
   }
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md transition-all duration-500 animate-fade-in select-none">
+  return createPortal(
+    <div className="fixed inset-0 w-screen h-screen min-h-screen z-[999999] flex items-center justify-center p-4 bg-[#060913]/98 backdrop-blur-2xl transition-all duration-500 animate-fade-in select-none overflow-hidden">
       
-      {/* ONLY THIS CARD IS DISPLAYED IN SCREEN */}
-      <div className="relative w-full max-w-lg bg-gradient-to-b from-[#111827] to-[#0B0F19] border border-slate-700/80 rounded-3xl p-8 shadow-2xl overflow-hidden flex flex-col items-center text-center transform transition-all duration-300">
+      {/* Ambient background glow orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-1/3 left-1/2 -translate-x-1/2 translate-y-1/2 w-[400px] h-[400px] rounded-full bg-teal-500/10 blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '1.2s' }} />
+      </div>
+
+      {/* FIXED IMMERSIVE CARD */}
+      <div className="relative w-full max-w-md bg-gradient-to-b from-[#111827] via-[#0E1626] to-[#070D18] border border-emerald-500/30 rounded-3xl p-8 sm:p-10 shadow-[0_0_80px_rgba(16,185,129,0.22)] overflow-hidden flex flex-col items-center text-center transform transition-all duration-300">
         
-        {/* Subtle Ambient Backlight Glow */}
-        <div className={`absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-3xl pointer-events-none transition-all duration-700 ${
-          showSuccessBadge ? 'bg-emerald-500/25' : 'bg-brand-purple/20'
-        }`} />
+        {/* Subtle Ambient Backlight Glow inside card */}
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-3xl pointer-events-none transition-all duration-700 bg-emerald-500/25" />
 
         {!showSuccessBadge ? (
           /* ================= ACTIVE ANALYZING STATE ================= */
-          <div className="flex flex-col items-center space-y-6 w-full relative z-10 py-2">
+          <div className="flex flex-col items-center space-y-7 w-full relative z-10 py-4">
             
             {/* Animated Radar & Scanning Document Badge */}
-            <div className="relative w-24 h-24 flex items-center justify-center">
-              {/* Spinning outer radar rings */}
-              <div className="absolute inset-0 rounded-full border-2 border-brand-purple/20 animate-ping opacity-40" />
-              <div className="absolute inset-0 rounded-full border border-brand-purple/40 border-t-brand-purple animate-spin" />
-              <div className="absolute inset-2 rounded-full border border-emerald-500/30 border-b-emerald-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '3s' }} />
+            <div className="relative w-28 h-28 flex items-center justify-center">
+              {/* Outer Ripple Rings */}
+              <div className="absolute inset-0 rounded-full border border-emerald-500/30 animate-ping opacity-35" />
+              <div className="absolute -inset-2 rounded-full border border-emerald-500/20 animate-pulse" />
               
-              {/* Center icon */}
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-purple/30 to-emerald-500/20 border border-slate-600/60 flex items-center justify-center text-emerald-400 shadow-inner">
-                <Brain size={30} className="animate-pulse text-emerald-400" />
-              </div>
-            </div>
-
-            {/* Informative Header */}
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-purple/20 border border-brand-purple/40 text-brand-purple-light text-xs font-bold uppercase tracking-wider">
-                <Sparkles size={13} className="animate-pulse" />
-                <span>AI Resume Intelligence</span>
-              </div>
-              <h3 className="font-outfit font-extrabold text-2xl text-white">
-                Analyzing Your Resume
-              </h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                Gemini AI is parsing and verifying your authentic credentials, projects, and tech stacks.
-              </p>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-slate-700/50">
+              {/* Counter-rotating cyber radar rings */}
               <div
-                className="h-full bg-gradient-to-r from-brand-purple via-indigo-500 to-emerald-400 transition-all duration-700 rounded-full"
-                style={{ width: `${Math.min(95, (currentStepIndex + 1) * 20)}%` }}
+                className="absolute inset-0 rounded-full border-2 border-transparent border-t-emerald-400 border-r-emerald-500/60 animate-spin"
+                style={{ animationDuration: '2.2s' }}
               />
+              <div
+                className="absolute inset-2 rounded-full border-2 border-transparent border-b-teal-400 border-l-teal-500/40 animate-spin"
+                style={{ animationDirection: 'reverse', animationDuration: '3s' }}
+              />
+              
+              {/* Center glowing badge with laser scan sweep */}
+              <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-emerald-500/20 via-slate-900 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)] overflow-hidden">
+                <FileText size={34} className="text-emerald-400 animate-pulse" />
+                
+                {/* Laser scan line sweeping across */}
+                <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-300 to-transparent shadow-[0_0_12px_#34d399] animate-scan-laser" />
+              </div>
             </div>
 
-            {/* Step Checklist Box */}
-            <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-left space-y-2.5">
-              {ANALYSIS_STEPS.map((step, idx) => {
-                const isPassed = idx < currentStepIndex;
-                const isCurrent = idx === currentStepIndex;
-
-                return (
-                  <div key={idx} className="flex items-center gap-2.5 text-xs transition-colors duration-300">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold transition-all ${
-                      isPassed
-                        ? 'bg-emerald-500 text-white'
-                        : isCurrent
-                        ? 'bg-brand-purple text-white ring-2 ring-brand-purple/50 animate-pulse'
-                        : 'bg-slate-800 text-slate-500 border border-slate-700'
-                    }`}>
-                      {isPassed ? <Check size={11} strokeWidth={3} /> : idx + 1}
-                    </span>
-                    <span className={`leading-tight ${
-                      isPassed
-                        ? 'text-slate-300 font-medium'
-                        : isCurrent
-                        ? 'text-white font-semibold'
-                        : 'text-slate-600'
-                    }`}>
-                      {step}
-                    </span>
-                  </div>
-                );
-              })}
+            {/* ONLY TEXT: "Resume processing" with animated dots */}
+            <div className="flex flex-col items-center space-y-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-outfit font-extrabold text-2xl sm:text-3xl bg-gradient-to-r from-emerald-400 via-teal-200 to-emerald-400 bg-clip-text text-transparent tracking-wide">
+                  Resume processing
+                </h3>
+                <div className="ai-thinking-dots flex items-center gap-1">
+                  <span className="!w-2 !h-2 !bg-emerald-400" />
+                  <span className="!w-2 !h-2 !bg-emerald-400" />
+                  <span className="!w-2 !h-2 !bg-emerald-400" />
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] text-slate-500">
-              <ShieldCheck size={13} className="text-emerald-400" />
-              <span>Zero placeholders • 100% extracted from your resume</span>
+            {/* Futuristic Equalizer Wave & Infinite Shimmer Progress Bar */}
+            <div className="w-full flex flex-col items-center space-y-3 pt-1">
+              {/* Equalizer Frequency Bars */}
+              <div className="flex items-center justify-center gap-1.5 h-6">
+                {[0.4, 0.7, 1, 0.6, 0.9, 0.5, 0.8].map((scale, i) => (
+                  <div
+                    key={i}
+                    className="w-1 bg-gradient-to-t from-emerald-500 to-teal-300 rounded-full animate-pulse"
+                    style={{
+                      height: `${Math.round(scale * 22)}px`,
+                      animationDelay: `${i * 0.15}s`,
+                      animationDuration: '1s'
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Infinite Glowing Laser Progress Line */}
+              <div className="w-48 h-1 bg-slate-800/90 rounded-full overflow-hidden relative border border-slate-700/60 shadow-inner">
+                <div className="absolute inset-y-0 w-24 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10B981] animate-shimmer" />
+              </div>
             </div>
 
           </div>
@@ -177,26 +155,21 @@ const ResumeAnalyzingCard = ({
             </div>
 
             {/* Success Text */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <h3 className="font-outfit font-black text-2xl sm:text-3xl text-white tracking-tight">
-                Resume Analyzed!
+                Resume Processed!
               </h3>
               <p className="text-xs sm:text-sm text-emerald-400 font-semibold">
-                Structured profile created & verified successfully
+                Intelligence profile verified & ready
               </p>
-            </div>
-
-            {/* Redirection indicator badge */}
-            <div className="px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-medium flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Opening your dashboard...</span>
             </div>
 
           </div>
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -84,7 +84,7 @@ const ChatBot = () => {
       {/* Floating Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 rounded-full bg-brand-purple dark:bg-dark-purple text-white flex items-center justify-center shadow-lg shadow-purple-glow hover:bg-brand-purpleHover dark:hover:bg-dark-purpleHover hover:scale-105 active:scale-95 transition-all duration-300 z-50 relative border border-white/10"
+        className="w-14 h-14 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-green-glow hover:bg-emerald-700 dark:hover:bg-emerald-400 hover:scale-105 active:scale-95 transition-all duration-300 z-50 relative border border-white/10"
       >
         {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
       </button>
@@ -93,14 +93,14 @@ const ChatBot = () => {
       {isOpen && (
         <div className="absolute bottom-20 right-0 w-80 sm:w-96 h-[480px] rounded-3xl bg-white dark:bg-dark-surface border border-brand-border dark:border-dark-border shadow-2xl overflow-hidden flex flex-col animate-slide-up glass-panel">
           {/* Header */}
-          <div className="px-5 py-4 bg-gradient-to-r from-brand-purple to-brand-blue text-white flex items-center justify-between">
+          <div className="px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                 <Sparkles size={16} className="text-white animate-pulse" />
               </div>
               <div>
                 <h3 className="font-outfit font-bold text-sm leading-tight text-white">AI Interview Coach</h3>
-                <span className="text-[10px] text-brand-purple-light opacity-90">Ready to assist you</span>
+                <span className="text-[10px] text-emerald-100 opacity-90">Ready to assist you</span>
               </div>
             </div>
             <button

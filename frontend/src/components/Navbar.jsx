@@ -49,11 +49,11 @@ const Navbar = () => {
           {/* Logo and Brand Name */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white shadow-purple-glow transition-transform duration-300 group-hover:scale-105">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-green-glow transition-transform duration-300 group-hover:scale-105">
                 <Cpu size={20} className="animate-pulse" />
               </div>
               <span className="font-outfit font-extrabold text-xl tracking-tight text-brand-charcoal dark:text-dark-text">
-                Mock<span className="bg-gradient-to-r from-brand-purple to-brand-blue dark:from-dark-purple dark:to-dark-cyan bg-clip-text text-transparent">AI</span>
+                Mock<span className="bg-gradient-to-r from-emerald-500 to-teal-400 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">AI</span>
               </span>
             </Link>
           </div>
@@ -97,7 +97,7 @@ const Navbar = () => {
                       className="w-8 h-8 rounded-full object-cover border border-brand-purple dark:border-dark-purple shadow-sm"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white font-outfit font-bold text-sm shadow-purple-glow">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white font-outfit font-bold text-sm shadow-green-glow">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -206,7 +206,7 @@ const Navbar = () => {
                       className="w-10 h-10 rounded-full object-cover border border-brand-purple dark:border-dark-purple"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-purple to-brand-blue flex items-center justify-center text-white font-outfit font-bold">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white font-outfit font-bold shadow-green-glow">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                   )}
